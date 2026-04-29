@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Group {
+  id         String         @id @default(cuid())
+  name       String
+  members    Member[]
+  categories Category[]
+  items      ShoppingItem[]
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@map("groups")
+}
+
+model Member {
+  id        String         @id @default(cuid())
+  name      String
+  groupId   String
+  group     Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  items     ShoppingItem[]
+  createdAt DateTime       @default(now())
+
+  @@map("members")
+}
+
+model Category {
+  id        String         @id @default(cuid())
+  name      String
+  groupId   String
+  group     Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  items     ShoppingItem[]
+  createdAt DateTime       @default(now())
+
+  @@map("categories")
+}
+
+model ShoppingItem {
+  id          String   @id @default(cuid())
+  name        String
+  memo        String?
+  imageUrl    String?
+  isPurchased Boolean  @default(false)
+  groupId     String
+  memberId    String
+  categoryId  String
+  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("shopping_items")
+}

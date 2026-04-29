@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(157, 220, 255, 0.38), transparent 28%),
+    radial-gradient(circle at 86% 8%, rgba(159, 231, 212, 0.44), transparent 24%),
+    linear-gradient(180deg, #fffaf0 0%, #fff6dd 100%);
+  color: #42373a;
+  --font-display: "Arial Rounded MT Bold", "Avenir Next Rounded Std", "Trebuchet MS", sans-serif;
+  --font-body: "Avenir Next", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-family: var(--font-body), sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.mobile-shell {
+  min-height: 100dvh;
+  width: min(100%, 430px);
+  margin: 0 auto;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.54) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.54) 1px, transparent 1px),
+    #fffaf0;
+  background-size: 24px 24px;
+  box-shadow: 0 0 0 1px rgba(66, 55, 58, 0.08), 0 30px 80px rgba(66, 55, 58, 0.14);
+}
