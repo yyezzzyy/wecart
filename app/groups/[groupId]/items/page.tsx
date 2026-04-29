@@ -47,9 +47,11 @@ export default function ItemsPage() {
     updateItem
   } = useWecartStore();
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null);
   const [form, setForm] = useState<ItemForm>(emptyForm);
   const [isSavingItem, setIsSavingItem] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!group) return;
@@ -74,6 +76,7 @@ export default function ItemsPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setUploadError(null);
     setPreviewUrl(URL.createObjectURL(file));
 
     const response = await fetch("/api/upload", {
@@ -85,48 +88,98 @@ export default function ItemsPage() {
       })
     });
 
-    if (response.ok) {
-      const data = (await response.json()) as {
-        bucket: string;
-        path: string;
-        token: string;
-        publicUrl: string;
-        contentType: string;
-      };
-      const supabase = getSupabaseBrowser();
-      const { error } = await supabase.storage
-        .from(data.bucket)
-        .uploadToSignedUrl(data.path, data.token, file, {
-          contentType: data.contentType
-        });
-
-      if (!error) {
-        setForm((current) => ({ ...current, imageUrl: data.publicUrl }));
-      }
+    if (!response.ok) {
+      const data = (await response.json().catch(() => null)) as { message?: string } | null;
+      setUploadError(data?.message || "업로드 준비에 실패했어요.");
+      return;
     }
+
+    const data = (await response.json()) as {
+      bucket: string;
+      path: string;
+      token: string;
+      publicUrl: string;
+      contentType: string;
+    };
+    const supabase = getSupabaseBrowser();
+    const { error } = await supabase.storage
+      .from(data.bucket)
+      .uploadToSignedUrl(data.path, data.token, file, {
+        contentType: data.contentType
+      });
+
+    if (error) {
+      setUploadError(error.message);
+      return;
+    }
+
+    setForm((current) => ({ ...current, imageUrl: data.publicUrl }));
   }
 
-  async function handleCreateItem(event: FormEvent<HTMLFormElement>) {
+  function openCreateModal() {
+    if (!group) return;
+    setEditingItem(null);
+    setPreviewUrl(null);
+    setUploadError(null);
+    setForm({
+      ...emptyForm,
+      categoryId: group.categories[0]?.id || "",
+      memberId: group.members[0]?.id || ""
+    });
+    setIsItemModalOpen(true);
+  }
+
+  function openEditModal(item: ShoppingItem) {
+    setEditingItem(item);
+    setPreviewUrl(null);
+    setUploadError(null);
+    setForm({
+      name: item.name,
+      categoryId: item.categoryId,
+      memberId: item.memberId,
+      memo: item.memo || "",
+      imageUrl: item.imageUrl || "",
+      mapUrl: item.mapUrl || "",
+      referenceUrl: item.referenceUrl || ""
+    });
+    setIsItemModalOpen(true);
+  }
+
+  function closeItemModal() {
+    setIsItemModalOpen(false);
+    setEditingItem(null);
+    setPreviewUrl(null);
+    setUploadError(null);
+  }
+
+  async function handleSaveItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!group || !form.name.trim() || !form.categoryId || !form.memberId || isSavingItem) return;
 
     setIsSavingItem(true);
-    const response = await fetch(`/api/groups/${params.groupId}/items`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form)
-    });
+    const response = await fetch(
+      editingItem ? `/api/items/${editingItem.id}` : `/api/groups/${params.groupId}/items`,
+      {
+        method: editingItem ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form)
+      }
+    );
 
     setIsSavingItem(false);
     if (response.ok) {
-      addItem(await response.json());
+      const item = await response.json();
+      if (editingItem) {
+        updateItem(item);
+      } else {
+        addItem(item);
+      }
       setForm({
         ...emptyForm,
         categoryId: group.categories[0]?.id || "",
         memberId: group.members[0]?.id || ""
       });
-      setPreviewUrl(null);
-      setIsItemModalOpen(false);
+      closeItemModal();
     }
   }
 
@@ -188,7 +241,7 @@ export default function ItemsPage() {
 
       <div className="mt-4 space-y-4">
         {filteredItems.map((item) => (
-          <ItemCard key={item.id} item={item} onToggle={() => togglePurchased(item)} />
+          <ItemCard key={item.id} item={item} onToggle={() => togglePurchased(item)} onEdit={() => openEditModal(item)} />
         ))}
 
         {filteredItems.length === 0 && (
@@ -196,11 +249,11 @@ export default function ItemsPage() {
         )}
       </div>
 
-      <AddItemButton onClick={() => setIsItemModalOpen(true)} />
+      <AddItemButton onClick={openCreateModal} />
 
       <button
         type="button"
-        onClick={() => setIsItemModalOpen(true)}
+        onClick={openCreateModal}
         className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-[20px] bg-ink text-sm font-black text-white"
       >
         <Plus size={18} />
@@ -209,15 +262,17 @@ export default function ItemsPage() {
 
       {isItemModalOpen && (
         <AddItemModal
+          mode={editingItem ? "edit" : "create"}
           form={form}
           previewUrl={previewUrl}
           categories={group.categories}
           members={group.members}
           isSaving={isSavingItem}
-          onClose={() => setIsItemModalOpen(false)}
-          onSubmit={handleCreateItem}
+          onClose={closeItemModal}
+          onSubmit={handleSaveItem}
           onFormChange={setForm}
           onImageChange={handleImageChange}
+          uploadError={uploadError}
         />
       )}
     </div>

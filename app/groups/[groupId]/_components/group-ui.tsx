@@ -284,7 +284,15 @@ export function CategoryManager({
   );
 }
 
-export function ItemCard({ item, onToggle }: { item: ShoppingItem; onToggle: () => void }) {
+export function ItemCard({
+  item,
+  onToggle,
+  onEdit
+}: {
+  item: ShoppingItem;
+  onToggle: () => void;
+  onEdit: () => void;
+}) {
   return (
     <article
       className={clsx(
@@ -310,16 +318,27 @@ export function ItemCard({ item, onToggle }: { item: ShoppingItem; onToggle: () 
             <p className="break-words text-lg font-black">{item.name}</p>
             {item.memo && <p className="mt-1 break-words text-sm leading-6 text-ink/60">{item.memo}</p>}
           </div>
-          <button
-            type="button"
-            onClick={onToggle}
-            className={clsx(
-              "grid h-12 w-12 shrink-0 place-items-center rounded-2xl border-2",
-              item.isPurchased ? "border-mint bg-mint" : "border-ink/10 bg-cream"
-            )}
-          >
-            <Check size={22} strokeWidth={4} />
-          </button>
+          <div className="grid shrink-0 grid-cols-1 gap-2">
+            <button
+              type="button"
+              onClick={onEdit}
+              className="grid h-12 w-12 place-items-center rounded-2xl border-2 border-ink/10 bg-white text-ink"
+              aria-label={`${item.name} 수정`}
+            >
+              <Pencil size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={onToggle}
+              className={clsx(
+                "grid h-12 w-12 place-items-center rounded-2xl border-2",
+                item.isPurchased ? "border-mint bg-mint" : "border-ink/10 bg-cream"
+              )}
+              aria-label={`${item.name} 구매 완료`}
+            >
+              <Check size={22} strokeWidth={4} />
+            </button>
+          </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
           <span className="rounded-full bg-sakura/16 px-3 py-1 text-xs font-black text-sakura">
@@ -392,6 +411,7 @@ export function AddItemButton({ onClick }: { onClick: () => void }) {
 }
 
 export function AddItemModal({
+  mode = "create",
   form,
   previewUrl,
   categories,
@@ -400,8 +420,10 @@ export function AddItemModal({
   onClose,
   onSubmit,
   onFormChange,
-  onImageChange
+  onImageChange,
+  uploadError
 }: {
+  mode?: "create" | "edit";
   form: ItemForm;
   previewUrl: string | null;
   categories: Category[];
@@ -411,12 +433,16 @@ export function AddItemModal({
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   onFormChange: (form: ItemForm) => void;
   onImageChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  uploadError?: string | null;
 }) {
   return (
     <div className="fixed inset-0 z-40 grid place-items-end bg-ink/35 px-3 backdrop-blur-sm">
       <form onSubmit={onSubmit} className="mb-3 w-full max-w-[430px] rounded-[32px] bg-ivory p-4 shadow-2xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-black">쇼핑템 추가</h2>
+          <div>
+            <p className="text-xs font-black text-sakura">{mode === "edit" ? "EDIT ITEM" : "NEW ITEM"}</p>
+            <h2 className="mt-1 text-xl font-black">{mode === "edit" ? "쇼핑템 수정" : "쇼핑템 추가"}</h2>
+          </div>
           <button type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full bg-white">
             <X size={20} />
           </button>
@@ -456,18 +482,25 @@ export function AddItemModal({
 
           <label className="flex min-h-28 cursor-pointer items-center gap-3 rounded-2xl border-2 border-dashed border-sakura/45 bg-white p-3">
             <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-cream">
-              {previewUrl ? (
-                <Image src={previewUrl} alt="" width={64} height={64} className="h-full w-full object-cover" />
+              {previewUrl || form.imageUrl ? (
+                <Image src={previewUrl || form.imageUrl} alt="" width={64} height={64} className="h-full w-full object-cover" />
               ) : (
                 <ImagePlus className="text-sakura" size={25} />
               )}
             </div>
             <div>
-              <p className="font-black">이미지 업로드</p>
-              <p className="mt-1 text-xs leading-5 text-ink/55">캡쳐 이미지나 상품 사진을 올려요.</p>
+              <p className="font-black">{mode === "edit" ? "이미지 변경" : "이미지 업로드"}</p>
+              <p className="mt-1 text-xs leading-5 text-ink/55">
+                {mode === "edit" ? "새 사진을 올리면 기존 이미지를 교체해요." : "캡쳐 이미지나 상품 사진을 올려요."}
+              </p>
             </div>
             <input type="file" accept="image/*" onChange={onImageChange} className="sr-only" />
           </label>
+          {uploadError && (
+            <p className="rounded-2xl bg-peach/45 px-3 py-2 text-xs font-black leading-5 text-ink">
+              이미지 업로드 실패: {uploadError}
+            </p>
+          )}
 
           <textarea
             value={form.memo}
@@ -499,7 +532,7 @@ export function AddItemModal({
           disabled={isSaving || !form.name.trim() || !form.categoryId || !form.memberId}
           className="mt-4 h-14 w-full rounded-[22px] bg-ink text-base font-black text-white disabled:bg-ink/30"
         >
-          {isSaving ? "저장 중..." : "저장"}
+          {isSaving ? "저장 중..." : mode === "edit" ? "수정 저장" : "저장"}
         </button>
       </form>
     </div>
