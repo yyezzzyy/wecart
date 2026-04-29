@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import "./globals.css";
+
+const memoment = localFont({
+  src: "./assets/fonts/MemomentKkukkukk.otf",
+  variable: "--font-memoment",
+  display: "swap"
+});
 
 export const metadata: Metadata = {
   title: "WECART",
@@ -9,7 +16,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
-      <body>
+      <body className={memoment.variable}>
         <main className="mobile-shell">{children}</main>
       </body>
     </html>

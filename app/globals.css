@@ -22,8 +22,8 @@ body {
     radial-gradient(circle at 86% 8%, rgba(159, 231, 212, 0.44), transparent 24%),
     linear-gradient(180deg, #fffaf0 0%, #fff6dd 100%);
   color: #42373a;
-  --font-display: "Arial Rounded MT Bold", "Avenir Next Rounded Std", "Trebuchet MS", sans-serif;
-  --font-body: "Avenir Next", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-display: var(--font-memoment);
+  --font-body: var(--font-memoment);
   font-family: var(--font-body), sans-serif;
 }
 
