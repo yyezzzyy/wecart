@@ -4,6 +4,7 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { Plus } from "lucide-react";
 import type { ShoppingItem } from "@/lib/types";
+import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 import { useWecartStore } from "@/stores/useWecartStore";
 import {
   AddItemButton,
@@ -74,17 +75,34 @@ export default function ItemsPage() {
     if (!file) return;
 
     setPreviewUrl(URL.createObjectURL(file));
-    const body = new FormData();
-    body.append("file", file);
 
     const response = await fetch("/api/upload", {
       method: "POST",
-      body
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fileName: file.name,
+        contentType: file.type
+      })
     });
 
     if (response.ok) {
-      const data = (await response.json()) as { imageUrl: string };
-      setForm((current) => ({ ...current, imageUrl: data.imageUrl }));
+      const data = (await response.json()) as {
+        bucket: string;
+        path: string;
+        token: string;
+        publicUrl: string;
+        contentType: string;
+      };
+      const supabase = getSupabaseBrowser();
+      const { error } = await supabase.storage
+        .from(data.bucket)
+        .uploadToSignedUrl(data.path, data.token, file, {
+          contentType: data.contentType
+        });
+
+      if (!error) {
+        setForm((current) => ({ ...current, imageUrl: data.publicUrl }));
+      }
     }
   }
 
