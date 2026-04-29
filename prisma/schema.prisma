@@ -47,6 +47,8 @@ model ShoppingItem {
   name        String
   memo        String?
   imageUrl    String?
+  mapUrl      String?
+  referenceUrl String?
   isPurchased Boolean  @default(false)
   groupId     String
   memberId    String

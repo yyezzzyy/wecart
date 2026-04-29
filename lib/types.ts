@@ -15,6 +15,8 @@ export type ShoppingItem = {
   name: string;
   memo: string | null;
   imageUrl: string | null;
+  mapUrl: string | null;
+  referenceUrl: string | null;
   isPurchased: boolean;
   groupId: string;
   memberId: string;
