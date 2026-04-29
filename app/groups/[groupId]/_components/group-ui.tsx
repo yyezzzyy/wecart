@@ -421,7 +421,8 @@ export function AddItemModal({
   onSubmit,
   onFormChange,
   onImageChange,
-  uploadError
+  uploadError,
+  isUploadingImage
 }: {
   mode?: "create" | "edit";
   form: ItemForm;
@@ -434,6 +435,7 @@ export function AddItemModal({
   onFormChange: (form: ItemForm) => void;
   onImageChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   uploadError?: string | null;
+  isUploadingImage?: boolean;
 }) {
   return (
     <div className="fixed inset-0 z-40 grid place-items-end bg-ink/35 px-3 backdrop-blur-sm">
@@ -489,9 +491,15 @@ export function AddItemModal({
               )}
             </div>
             <div>
-              <p className="font-black">{mode === "edit" ? "이미지 변경" : "이미지 업로드"}</p>
+              <p className="font-black">
+                {isUploadingImage ? "이미지 줄이는 중..." : mode === "edit" ? "이미지 변경" : "이미지 업로드"}
+              </p>
               <p className="mt-1 text-xs leading-5 text-ink/55">
-                {mode === "edit" ? "새 사진을 올리면 기존 이미지를 교체해요." : "캡쳐 이미지나 상품 사진을 올려요."}
+                {isUploadingImage
+                  ? "모바일 원본 사진을 작게 압축해서 올리고 있어요."
+                  : mode === "edit"
+                    ? "새 사진을 올리면 기존 이미지를 교체해요."
+                    : "캡쳐 이미지나 상품 사진을 올려요."}
               </p>
             </div>
             <input type="file" accept="image/*" onChange={onImageChange} className="sr-only" />
@@ -529,10 +537,10 @@ export function AddItemModal({
         </div>
 
         <button
-          disabled={isSaving || !form.name.trim() || !form.categoryId || !form.memberId}
+          disabled={isSaving || isUploadingImage || !form.name.trim() || !form.categoryId || !form.memberId}
           className="mt-4 h-14 w-full rounded-[22px] bg-ink text-base font-black text-white disabled:bg-ink/30"
         >
-          {isSaving ? "저장 중..." : mode === "edit" ? "수정 저장" : "저장"}
+          {isUploadingImage ? "이미지 업로드 중..." : isSaving ? "저장 중..." : mode === "edit" ? "수정 저장" : "저장"}
         </button>
       </form>
     </div>

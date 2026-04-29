@@ -4,6 +4,7 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { Plus } from "lucide-react";
 import type { ShoppingItem } from "@/lib/types";
+import { compressImage } from "@/lib/compressImage";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 import { useWecartStore } from "@/stores/useWecartStore";
 import {
@@ -52,6 +53,7 @@ export default function ItemsPage() {
   const [isSavingItem, setIsSavingItem] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   useEffect(() => {
     if (!group) return;
@@ -77,20 +79,32 @@ export default function ItemsPage() {
     if (!file) return;
 
     setUploadError(null);
-    setPreviewUrl(URL.createObjectURL(file));
+    setIsUploadingImage(true);
+
+    let uploadFile: File;
+    try {
+      const compressed = await compressImage(file);
+      uploadFile = compressed.file;
+      setPreviewUrl(compressed.previewUrl);
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "이미지 압축에 실패했어요.");
+      setIsUploadingImage(false);
+      return;
+    }
 
     const response = await fetch("/api/upload", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        fileName: file.name,
-        contentType: file.type
+        fileName: uploadFile.name,
+        contentType: uploadFile.type
       })
     });
 
     if (!response.ok) {
       const data = (await response.json().catch(() => null)) as { message?: string } | null;
       setUploadError(data?.message || "업로드 준비에 실패했어요.");
+      setIsUploadingImage(false);
       return;
     }
 
@@ -104,16 +118,18 @@ export default function ItemsPage() {
     const supabase = getSupabaseBrowser();
     const { error } = await supabase.storage
       .from(data.bucket)
-      .uploadToSignedUrl(data.path, data.token, file, {
+      .uploadToSignedUrl(data.path, data.token, uploadFile, {
         contentType: data.contentType
       });
 
     if (error) {
       setUploadError(error.message);
+      setIsUploadingImage(false);
       return;
     }
 
     setForm((current) => ({ ...current, imageUrl: data.publicUrl }));
+    setIsUploadingImage(false);
   }
 
   function openCreateModal() {
@@ -121,6 +137,7 @@ export default function ItemsPage() {
     setEditingItem(null);
     setPreviewUrl(null);
     setUploadError(null);
+    setIsUploadingImage(false);
     setForm({
       ...emptyForm,
       categoryId: group.categories[0]?.id || "",
@@ -133,6 +150,7 @@ export default function ItemsPage() {
     setEditingItem(item);
     setPreviewUrl(null);
     setUploadError(null);
+    setIsUploadingImage(false);
     setForm({
       name: item.name,
       categoryId: item.categoryId,
@@ -150,6 +168,7 @@ export default function ItemsPage() {
     setEditingItem(null);
     setPreviewUrl(null);
     setUploadError(null);
+    setIsUploadingImage(false);
   }
 
   async function handleSaveItem(event: FormEvent<HTMLFormElement>) {
@@ -273,6 +292,7 @@ export default function ItemsPage() {
           onFormChange={setForm}
           onImageChange={handleImageChange}
           uploadError={uploadError}
+          isUploadingImage={isUploadingImage}
         />
       )}
     </div>
