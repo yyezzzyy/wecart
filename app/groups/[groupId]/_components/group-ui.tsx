@@ -1,10 +1,12 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   Check,
+  ChevronDown,
   CirclePlus,
   ImagePlus,
   LayoutGrid,
@@ -12,14 +14,15 @@ import {
   Newspaper,
   ExternalLink,
   ListChecks,
+  Maximize2,
   Pencil,
   ShoppingBag,
   Trash2,
   UserRound,
-  X
-} from "lucide-react";
-import clsx from "clsx";
-import type { Category, Member, ShoppingItem } from "@/lib/types";
+  X,
+} from 'lucide-react';
+import clsx from 'clsx';
+import type { Category, Member, ShoppingItem } from '@/lib/types';
 
 export type MemberSummary = {
   member: Member;
@@ -53,7 +56,7 @@ export function GroupLoading() {
 export function GroupHeader({
   title,
   subtitle,
-  memberCount
+  memberCount,
 }: {
   title: string;
   subtitle: string;
@@ -63,7 +66,9 @@ export function GroupHeader({
     <header className="sticky top-0 z-20 border-b border-white/70 bg-ivory/92 px-4 pb-4 pt-5 backdrop-blur">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.24em] text-sakura">WECART</p>
+          <p className="text-xs font-black uppercase tracking-[0.24em] text-sakura">
+            WECART
+          </p>
           <h1 className="mt-1 text-2xl font-black text-ink">{title}</h1>
           <p className="mt-1 text-xs font-bold text-ink/50">{subtitle}</p>
         </div>
@@ -79,9 +84,13 @@ export function GroupHeader({
 export function BottomTabs({ groupId }: { groupId: string }) {
   const pathname = usePathname();
   const tabs = [
-    { href: `/groups/${groupId}/members`, label: "멤버", icon: UserRound },
-    { href: `/groups/${groupId}/items`, label: "쇼핑템", icon: ListChecks },
-    { href: `/groups/${groupId}/categories`, label: "카테고리", icon: LayoutGrid }
+    { href: `/groups/${groupId}/members`, label: '멤버', icon: UserRound },
+    { href: `/groups/${groupId}/items`, label: '쇼핑템', icon: ListChecks },
+    {
+      href: `/groups/${groupId}/categories`,
+      label: '카테고리',
+      icon: LayoutGrid,
+    },
   ];
 
   return (
@@ -95,8 +104,8 @@ export function BottomTabs({ groupId }: { groupId: string }) {
             key={tab.href}
             href={tab.href}
             className={clsx(
-              "flex h-[52px] flex-col items-center justify-center gap-1 rounded-[20px] text-xs font-black transition",
-              active ? "bg-ink text-white" : "bg-cream text-ink/60"
+              'flex h-[52px] flex-col items-center justify-center gap-1 rounded-[20px] text-xs font-black transition',
+              active ? 'bg-ink text-white' : 'bg-cream text-ink/60',
             )}
           >
             <Icon size={19} />
@@ -111,7 +120,7 @@ export function BottomTabs({ groupId }: { groupId: string }) {
 export function FilterChip({
   label,
   active,
-  onClick
+  onClick,
 }: {
   label: string;
   active: boolean;
@@ -122,8 +131,10 @@ export function FilterChip({
       type="button"
       onClick={onClick}
       className={clsx(
-        "h-10 shrink-0 rounded-full border-2 px-4 text-sm font-black transition",
-        active ? "border-ink bg-ink text-white" : "border-white bg-white text-ink"
+        'h-10 shrink-0 rounded-full border-2 px-4 text-sm font-black transition',
+        active
+          ? 'border-ink bg-ink text-white'
+          : 'border-white bg-white text-ink',
       )}
     >
       {label}
@@ -134,7 +145,7 @@ export function FilterChip({
 export function CategoryChip({
   category,
   active,
-  onSelect
+  onSelect,
 }: {
   category: Category;
   active: boolean;
@@ -145,8 +156,10 @@ export function CategoryChip({
       type="button"
       onClick={onSelect}
       className={clsx(
-        "h-10 shrink-0 rounded-2xl border-2 px-4 text-sm font-black transition",
-        active ? "border-sakura bg-sakura text-white" : "border-ink/10 bg-cream text-ink"
+        'h-10 shrink-0 rounded-2xl border-2 px-4 text-sm font-black transition',
+        active
+          ? 'border-sakura bg-sakura text-white'
+          : 'border-ink/10 bg-cream text-ink',
       )}
     >
       {category.name}
@@ -157,7 +170,7 @@ export function CategoryChip({
 export function MemberSummaryCard({
   summary,
   active,
-  onSelect
+  onSelect,
 }: {
   summary: MemberSummary;
   active: boolean;
@@ -170,13 +183,15 @@ export function MemberSummaryCard({
       type="button"
       onClick={onSelect}
       className={clsx(
-        "w-full rounded-[24px] border-2 p-3 text-left transition active:scale-[0.99]",
-        active ? "border-sakura bg-sakura/12" : "border-ink/10 bg-ivory"
+        'w-full rounded-[24px] border-2 p-3 text-left transition active:scale-[0.99]',
+        active ? 'border-sakura bg-sakura/12' : 'border-ink/10 bg-ivory',
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="break-words text-lg font-black">{summary.member.name}</p>
+          <p className="break-words text-lg font-black">
+            {summary.member.name}
+          </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-ink/65">
               전체 {summary.totalCount}
@@ -196,11 +211,14 @@ export function MemberSummaryCard({
 
       <div className="mt-3 space-y-2">
         {previewItems.map((item) => (
-          <div key={item.id} className="flex items-center justify-between gap-2 rounded-2xl bg-white/75 px-3 py-2">
+          <div
+            key={item.id}
+            className="flex items-center justify-between gap-2 rounded-2xl bg-white/75 px-3 py-2"
+          >
             <span
               className={clsx(
-                "min-w-0 truncate text-sm font-black",
-                item.isPurchased && "text-ink/40 line-through"
+                'min-w-0 truncate text-sm font-black',
+                item.isPurchased && 'text-ink/40 line-through',
               )}
             >
               {item.name}
@@ -230,7 +248,7 @@ export function CategoryManager({
   onNameChange,
   onCancel,
   onSave,
-  onDelete
+  onDelete,
 }: {
   category: Category;
   itemCount: number;
@@ -256,25 +274,43 @@ export function CategoryManager({
         ) : (
           <div className="min-w-0 flex-1">
             <p className="break-words text-lg font-black">{category.name}</p>
-            <p className="mt-1 text-xs font-bold text-ink/45">담긴 쇼핑템 {itemCount}개</p>
+            <p className="mt-1 text-xs font-bold text-ink/45">
+              담긴 쇼핑템 {itemCount}개
+            </p>
           </div>
         )}
 
         {isEditing ? (
           <>
-            <button type="button" onClick={onSave} className="grid h-11 w-11 place-items-center rounded-2xl bg-mint">
+            <button
+              type="button"
+              onClick={onSave}
+              className="grid h-11 w-11 place-items-center rounded-2xl bg-mint"
+            >
               <Check size={18} />
             </button>
-            <button type="button" onClick={onCancel} className="grid h-11 w-11 place-items-center rounded-2xl bg-cream">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="grid h-11 w-11 place-items-center rounded-2xl bg-cream"
+            >
               <X size={18} />
             </button>
           </>
         ) : (
           <>
-            <button type="button" onClick={onEdit} className="grid h-11 w-11 place-items-center rounded-2xl bg-cream">
+            <button
+              type="button"
+              onClick={onEdit}
+              className="grid h-11 w-11 place-items-center rounded-2xl bg-cream"
+            >
               <Pencil size={17} />
             </button>
-            <button type="button" onClick={onDelete} className="grid h-11 w-11 place-items-center rounded-2xl bg-peach/80">
+            <button
+              type="button"
+              onClick={onDelete}
+              className="grid h-11 w-11 place-items-center rounded-2xl bg-peach/80"
+            >
               <Trash2 size={17} />
             </button>
           </>
@@ -287,103 +323,201 @@ export function CategoryManager({
 export function ItemCard({
   item,
   onToggle,
-  onEdit
+  onEdit,
 }: {
   item: ShoppingItem;
   onToggle: () => void;
   onEdit: () => void;
 }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
+
   return (
-    <article
-      className={clsx(
-        "overflow-hidden rounded-[30px] border-2 border-white bg-white/84 shadow-sticker transition",
-        item.isPurchased && "opacity-55"
-      )}
-    >
-      {item.imageUrl && (
-        <div className="relative aspect-[16/10] w-full bg-cream">
-          <Image src={item.imageUrl} alt={item.name} fill className="object-cover" sizes="390px" />
-          {item.isPurchased && (
-            <div className="absolute inset-0 grid place-items-center bg-white/25">
-              <div className="grid h-16 w-16 place-items-center rounded-full bg-mint text-ink">
-                <Check size={34} strokeWidth={4} />
+    <>
+      <article
+        className={clsx(
+          'overflow-hidden rounded-[26px] border-2 border-white bg-white/84 shadow-sticker transition duration-300',
+          isExpanded && 'translate-y-[-1px] border-sakura/30',
+          item.isPurchased && 'opacity-55',
+        )}
+      >
+        <div className="p-3">
+          <div className="grid min-h-[68px] grid-cols-[minmax(0,1fr)_44px_44px_44px] items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <p
+                className={clsx(
+                  'truncate text-base font-black',
+                  item.isPurchased && 'line-through',
+                )}
+              >
+                {item.name}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <span className="rounded-full bg-sakura/16 px-2.5 py-1 text-[11px] font-black text-sakura">
+                  {item.member.name}
+                </span>
+                <span className="rounded-full bg-sky/28 px-2.5 py-1 text-[11px] font-black text-ink/65">
+                  {item.category.name}
+                </span>
               </div>
             </div>
-          )}
-        </div>
-      )}
-      <div className="p-4">
-        <div className="flex items-start gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="break-words text-lg font-black">{item.name}</p>
-            {item.memo && <p className="mt-1 break-words text-sm leading-6 text-ink/60">{item.memo}</p>}
-          </div>
-          <div className="grid shrink-0 grid-cols-1 gap-2">
+
             <button
               type="button"
               onClick={onEdit}
-              className="grid h-12 w-12 place-items-center rounded-2xl border-2 border-ink/10 bg-white text-ink"
+              className="grid h-11 w-11 place-items-center rounded-2xl border-2 border-ink/10 bg-white text-ink transition active:scale-95"
               aria-label={`${item.name} 수정`}
             >
-              <Pencil size={18} />
+              <Pencil size={17} />
             </button>
             <button
               type="button"
               onClick={onToggle}
               className={clsx(
-                "grid h-12 w-12 place-items-center rounded-2xl border-2",
-                item.isPurchased ? "border-mint bg-mint" : "border-ink/10 bg-cream"
+                'grid h-11 w-11 place-items-center rounded-2xl border-2 transition active:scale-95',
+                item.isPurchased
+                  ? 'border-mint bg-mint'
+                  : 'border-ink/10 bg-cream',
               )}
               aria-label={`${item.name} 구매 완료`}
             >
-              <Check size={22} strokeWidth={4} />
+              <Check size={21} strokeWidth={4} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsExpanded((current) => !current)}
+              className="grid h-11 w-11 place-items-center rounded-2xl bg-ink text-white transition active:scale-95"
+              aria-label={`${item.name} 상세 ${isExpanded ? '닫기' : '보기'}`}
+            >
+              <ChevronDown
+                className={clsx(
+                  'transition duration-300 ease-out',
+                  isExpanded && 'rotate-180',
+                )}
+                size={22}
+              />
             </button>
           </div>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <span className="rounded-full bg-sakura/16 px-3 py-1 text-xs font-black text-sakura">
-            {item.member.name}
-          </span>
-          <span className="rounded-full bg-sky/28 px-3 py-1 text-xs font-black text-ink/65">
-            {item.category.name}
-          </span>
-        </div>
-        {(item.mapUrl || item.referenceUrl) && (
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            {item.mapUrl && (
-              <a
-                href={item.mapUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-mint text-xs font-black text-ink"
-              >
-                <MapPin size={16} />
-                지도
-                <ExternalLink size={13} />
-              </a>
+
+          <div
+            className={clsx(
+              'grid transition-[grid-template-rows,opacity] duration-300 ease-out',
+              isExpanded
+                ? 'grid-rows-[1fr] opacity-100'
+                : 'grid-rows-[0fr] opacity-0',
             )}
-            {item.referenceUrl && (
-              <a
-                href={item.referenceUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-cream text-xs font-black text-ink"
-              >
-                <Newspaper size={16} />
-                참고
-                <ExternalLink size={13} />
-              </a>
-            )}
+          >
+            <div className="min-h-0 overflow-hidden">
+              <div className="mt-3 border-t-2 border-cream pt-4">
+                {item.imageUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setIsImagePreviewOpen(true)}
+                    className="relative mb-4 block aspect-[16/10] w-full overflow-hidden rounded-[22px] bg-cream text-left"
+                    aria-label={`${item.name} 이미지 크게 보기`}
+                  >
+                    <Image
+                      src={item.imageUrl}
+                      alt={item.name}
+                      fill
+                      className="object-cover"
+                      sizes="390px"
+                    />
+                    <span className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-2xl bg-white/90 text-ink shadow-lg">
+                      <Maximize2 size={18} />
+                    </span>
+                    {item.isPurchased && (
+                      <div className="absolute inset-0 grid place-items-center bg-white/25">
+                        <div className="grid h-16 w-16 place-items-center rounded-full bg-mint text-ink">
+                          <Check size={34} strokeWidth={4} />
+                        </div>
+                      </div>
+                    )}
+                  </button>
+                )}
+
+                {item.memo && (
+                  <p className="break-words text-sm leading-6 text-ink/60">
+                    {item.memo}
+                  </p>
+                )}
+
+                {!item.memo &&
+                  !item.mapUrl &&
+                  !item.referenceUrl &&
+                  !item.imageUrl && (
+                    <p className="text-sm font-bold text-ink/40">
+                      추가 정보가 아직 없어요.
+                    </p>
+                  )}
+
+                {(item.mapUrl || item.referenceUrl) && (
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    {item.mapUrl && (
+                      <a
+                        href={item.mapUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-mint text-xs font-black text-ink"
+                      >
+                        <MapPin size={16} />
+                        지도
+                        <ExternalLink size={13} />
+                      </a>
+                    )}
+                    {item.referenceUrl && (
+                      <a
+                        href={item.referenceUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-cream text-xs font-black text-ink"
+                      >
+                        <Newspaper size={16} />
+                        참고
+                        <ExternalLink size={13} />
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        )}
-      </div>
-    </article>
+        </div>
+      </article>
+
+      {isImagePreviewOpen && item.imageUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/92 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${item.name} 이미지 미리보기`}
+          onClick={() => setIsImagePreviewOpen(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setIsImagePreviewOpen(false)}
+            className="absolute right-4 top-4 z-10 grid h-11 w-11 place-items-center rounded-full bg-white text-ink shadow-lg"
+            aria-label="이미지 닫기"
+          >
+            <X size={22} />
+          </button>
+          <Image
+            src={item.imageUrl}
+            alt={item.name}
+            fill
+            className="h-auto max-h-[92dvh] w-auto max-w-full object-contain"
+            sizes="100vw"
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+      )}
+    </>
   );
 }
 
 export function EmptyState({
   title,
-  description
+  description,
 }: {
   title: string;
   description: string;
@@ -411,7 +545,7 @@ export function AddItemButton({ onClick }: { onClick: () => void }) {
 }
 
 export function AddItemModal({
-  mode = "create",
+  mode = 'create',
   form,
   previewUrl,
   categories,
@@ -422,9 +556,9 @@ export function AddItemModal({
   onFormChange,
   onImageChange,
   uploadError,
-  isUploadingImage
+  isUploadingImage,
 }: {
-  mode?: "create" | "edit";
+  mode?: 'create' | 'edit';
   form: ItemForm;
   previewUrl: string | null;
   categories: Category[];
@@ -438,14 +572,29 @@ export function AddItemModal({
   isUploadingImage?: boolean;
 }) {
   return (
-    <div className="fixed inset-0 z-40 grid place-items-end bg-ink/35 px-3 backdrop-blur-sm">
-      <form onSubmit={onSubmit} className="mb-3 w-full max-w-[430px] rounded-[32px] bg-ivory p-4 shadow-2xl">
+    <div
+      className="fixed inset-0 z-40 grid place-items-end bg-ink/35 px-3 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <form
+        onSubmit={onSubmit}
+        onClick={(event) => event.stopPropagation()}
+        className="mb-3 w-full max-w-[430px] rounded-[32px] bg-ivory p-4 shadow-2xl"
+      >
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <p className="text-xs font-black text-sakura">{mode === "edit" ? "EDIT ITEM" : "NEW ITEM"}</p>
-            <h2 className="mt-1 text-xl font-black">{mode === "edit" ? "쇼핑템 수정" : "쇼핑템 추가"}</h2>
+            <p className="text-xs font-black text-sakura">
+              {mode === 'edit' ? 'EDIT ITEM' : 'NEW ITEM'}
+            </p>
+            <h2 className="mt-1 text-xl font-black">
+              {mode === 'edit' ? '쇼핑템 수정' : '쇼핑템 추가'}
+            </h2>
           </div>
-          <button type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full bg-white">
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-10 w-10 place-items-center rounded-full bg-white"
+          >
             <X size={20} />
           </button>
         </div>
@@ -453,14 +602,18 @@ export function AddItemModal({
         <div className="space-y-3">
           <input
             value={form.name}
-            onChange={(event) => onFormChange({ ...form, name: event.target.value })}
+            onChange={(event) =>
+              onFormChange({ ...form, name: event.target.value })
+            }
             placeholder="상품명"
             className="h-[52px] w-full rounded-2xl border-2 border-ink/10 bg-white px-4 font-bold outline-none focus:border-sakura"
           />
           <div className="grid grid-cols-2 gap-2">
             <select
               value={form.categoryId}
-              onChange={(event) => onFormChange({ ...form, categoryId: event.target.value })}
+              onChange={(event) =>
+                onFormChange({ ...form, categoryId: event.target.value })
+              }
               className="h-[52px] rounded-2xl border-2 border-ink/10 bg-white px-3 font-bold outline-none"
             >
               {categories.map((category) => (
@@ -471,7 +624,9 @@ export function AddItemModal({
             </select>
             <select
               value={form.memberId}
-              onChange={(event) => onFormChange({ ...form, memberId: event.target.value })}
+              onChange={(event) =>
+                onFormChange({ ...form, memberId: event.target.value })
+              }
               className="h-[52px] rounded-2xl border-2 border-ink/10 bg-white px-3 font-bold outline-none"
             >
               {members.map((member) => (
@@ -485,24 +640,39 @@ export function AddItemModal({
           <label className="flex min-h-28 cursor-pointer items-center gap-3 rounded-2xl border-2 border-dashed border-sakura/45 bg-white p-3">
             <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-cream">
               {previewUrl || form.imageUrl ? (
-                <Image src={previewUrl || form.imageUrl} alt="" width={64} height={64} className="h-full w-full object-cover" />
+                <Image
+                  src={previewUrl || form.imageUrl}
+                  alt=""
+                  width={64}
+                  height={64}
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 <ImagePlus className="text-sakura" size={25} />
               )}
             </div>
             <div>
               <p className="font-black">
-                {isUploadingImage ? "이미지 줄이는 중..." : mode === "edit" ? "이미지 변경" : "이미지 업로드"}
+                {isUploadingImage
+                  ? '이미지 줄이는 중...'
+                  : mode === 'edit'
+                    ? '이미지 변경'
+                    : '이미지 업로드'}
               </p>
               <p className="mt-1 text-xs leading-5 text-ink/55">
                 {isUploadingImage
-                  ? "모바일 원본 사진을 작게 압축해서 올리고 있어요."
-                  : mode === "edit"
-                    ? "새 사진을 올리면 기존 이미지를 교체해요."
-                    : "캡쳐 이미지나 상품 사진을 올려요."}
+                  ? '모바일 원본 사진을 작게 압축해서 올리고 있어요.'
+                  : mode === 'edit'
+                    ? '새 사진을 올리면 기존 이미지를 교체해요.'
+                    : '캡쳐 이미지나 상품 사진을 올려요.'}
               </p>
             </div>
-            <input type="file" accept="image/*" onChange={onImageChange} className="sr-only" />
+            <input
+              type="file"
+              accept="image/*"
+              onChange={onImageChange}
+              className="sr-only"
+            />
           </label>
           {uploadError && (
             <p className="rounded-2xl bg-peach/45 px-3 py-2 text-xs font-black leading-5 text-ink">
@@ -512,7 +682,9 @@ export function AddItemModal({
 
           <textarea
             value={form.memo}
-            onChange={(event) => onFormChange({ ...form, memo: event.target.value })}
+            onChange={(event) =>
+              onFormChange({ ...form, memo: event.target.value })
+            }
             placeholder="메모"
             rows={3}
             className="w-full resize-none rounded-2xl border-2 border-ink/10 bg-white px-4 py-3 font-bold outline-none focus:border-sakura"
@@ -521,14 +693,18 @@ export function AddItemModal({
           <div className="grid grid-cols-1 gap-2">
             <input
               value={form.mapUrl}
-              onChange={(event) => onFormChange({ ...form, mapUrl: event.target.value })}
+              onChange={(event) =>
+                onFormChange({ ...form, mapUrl: event.target.value })
+              }
               placeholder="구글지도 URL"
               inputMode="url"
               className="h-[52px] w-full rounded-2xl border-2 border-ink/10 bg-white px-4 font-bold outline-none focus:border-sakura"
             />
             <input
               value={form.referenceUrl}
-              onChange={(event) => onFormChange({ ...form, referenceUrl: event.target.value })}
+              onChange={(event) =>
+                onFormChange({ ...form, referenceUrl: event.target.value })
+              }
               placeholder="참고 블로그 URL"
               inputMode="url"
               className="h-[52px] w-full rounded-2xl border-2 border-ink/10 bg-white px-4 font-bold outline-none focus:border-sakura"
@@ -537,10 +713,22 @@ export function AddItemModal({
         </div>
 
         <button
-          disabled={isSaving || isUploadingImage || !form.name.trim() || !form.categoryId || !form.memberId}
+          disabled={
+            isSaving ||
+            isUploadingImage ||
+            !form.name.trim() ||
+            !form.categoryId ||
+            !form.memberId
+          }
           className="mt-4 h-14 w-full rounded-[22px] bg-ink text-base font-black text-white disabled:bg-ink/30"
         >
-          {isUploadingImage ? "이미지 업로드 중..." : isSaving ? "저장 중..." : mode === "edit" ? "수정 저장" : "저장"}
+          {isUploadingImage
+            ? '이미지 업로드 중...'
+            : isSaving
+              ? '저장 중...'
+              : mode === 'edit'
+                ? '수정 저장'
+                : '저장'}
         </button>
       </form>
     </div>
