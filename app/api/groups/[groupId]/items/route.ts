@@ -35,7 +35,15 @@ export async function POST(request: Request, { params }: Params) {
     },
     include: {
       member: true,
-      category: true
+      category: true,
+      wantedBy: {
+        include: {
+          member: true
+        },
+        orderBy: {
+          createdAt: "asc"
+        }
+      }
     }
   });
 

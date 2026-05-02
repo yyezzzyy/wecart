@@ -242,8 +242,10 @@ export function MemberSummaryCard({
 export function CategoryManager({
   category,
   itemCount,
+  active,
   editingCategoryId,
   editingCategoryName,
+  onSelect,
   onEdit,
   onNameChange,
   onCancel,
@@ -252,8 +254,10 @@ export function CategoryManager({
 }: {
   category: Category;
   itemCount: number;
+  active?: boolean;
   editingCategoryId: string | null;
   editingCategoryName: string;
+  onSelect?: () => void;
   onEdit: () => void;
   onNameChange: (name: string) => void;
   onCancel: () => void;
@@ -263,7 +267,21 @@ export function CategoryManager({
   const isEditing = editingCategoryId === category.id;
 
   return (
-    <div className="rounded-[24px] border-2 border-white bg-white/78 p-3 shadow-sticker">
+    <div
+      role={onSelect ? 'button' : undefined}
+      tabIndex={onSelect ? 0 : undefined}
+      onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (!onSelect || (event.key !== 'Enter' && event.key !== ' ')) return;
+        event.preventDefault();
+        onSelect();
+      }}
+      className={clsx(
+        'rounded-[24px] border-2 bg-white/78 p-3 shadow-sticker transition',
+        active ? 'border-sakura' : 'border-white',
+      )}
+    >
       <div className="flex items-center gap-2">
         {isEditing ? (
           <input
@@ -284,14 +302,20 @@ export function CategoryManager({
           <>
             <button
               type="button"
-              onClick={onSave}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSave();
+              }}
               className="grid h-11 w-11 place-items-center rounded-2xl bg-mint"
             >
               <Check size={18} />
             </button>
             <button
               type="button"
-              onClick={onCancel}
+              onClick={(event) => {
+                event.stopPropagation();
+                onCancel();
+              }}
               className="grid h-11 w-11 place-items-center rounded-2xl bg-cream"
             >
               <X size={18} />
@@ -301,14 +325,20 @@ export function CategoryManager({
           <>
             <button
               type="button"
-              onClick={onEdit}
+              onClick={(event) => {
+                event.stopPropagation();
+                onEdit();
+              }}
               className="grid h-11 w-11 place-items-center rounded-2xl bg-cream"
             >
               <Pencil size={17} />
             </button>
             <button
               type="button"
-              onClick={onDelete}
+              onClick={(event) => {
+                event.stopPropagation();
+                onDelete();
+              }}
               className="grid h-11 w-11 place-items-center rounded-2xl bg-peach/80"
             >
               <Trash2 size={17} />
@@ -322,15 +352,25 @@ export function CategoryManager({
 
 export function ItemCard({
   item,
+  members,
+  savingWantKey,
   onToggle,
   onEdit,
+  onToggleWant,
 }: {
   item: ShoppingItem;
+  members?: Member[];
+  savingWantKey?: string | null;
   onToggle: () => void;
   onEdit: () => void;
+  onToggleWant?: (memberId: string) => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
+  const checkedMemberCount = new Set([
+    item.memberId,
+    ...item.wantedBy.map((want) => want.memberId),
+  ]).size;
 
   return (
     <>
@@ -399,6 +439,56 @@ export function ItemCard({
             </button>
           </div>
 
+          {members && members.length > 0 && onToggleWant && (
+            <div className="mt-3 rounded-[20px] border-2 border-cream bg-ivory p-2">
+              <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                <p className="text-xs font-black text-ink/50">멤버 체크</p>
+                <p className="text-xs font-black text-sakura">
+                  {checkedMemberCount}명
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {members.map((member) => {
+                  const isOwner = item.memberId === member.id;
+                  const isChecked =
+                    isOwner || item.wantedBy.some((want) => want.memberId === member.id);
+                  const wantKey = `${item.id}:${member.id}`;
+
+                  return (
+                    <button
+                      key={member.id}
+                      type="button"
+                      onClick={() => {
+                        if (!isOwner) onToggleWant(member.id);
+                      }}
+                      disabled={isOwner || savingWantKey === wantKey}
+                      className={clsx(
+                        'inline-flex h-10 items-center justify-center rounded-full border-2 px-4 text-sm font-black transition active:scale-95 disabled:opacity-80',
+                        isChecked && 'gap-2 pl-3',
+                        isChecked
+                          ? 'border-sakura bg-sakura text-white'
+                          : 'border-ink/10 bg-white text-ink/62',
+                        isOwner && 'cursor-default border-mint bg-mint text-ink',
+                      )}
+                    >
+                      {isChecked && (
+                        <span
+                          className={clsx(
+                            'grid h-5 w-5 place-items-center rounded-full',
+                            isOwner ? 'bg-white text-ink' : 'bg-white/24',
+                          )}
+                        >
+                          <Check size={14} strokeWidth={4} />
+                        </span>
+                      )}
+                      <span className="max-w-24 truncate">{member.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div
             className={clsx(
               'grid transition-[grid-template-rows,opacity] duration-300 ease-out',
@@ -409,6 +499,24 @@ export function ItemCard({
           >
             <div className="min-h-0 overflow-hidden">
               <div className="mt-3 border-t-2 border-cream pt-4">
+                {item.wantedBy.length > 0 && (
+                  <div className="mb-4 rounded-[20px] bg-sakura/10 px-3 py-3">
+                    <p className="text-xs font-black text-sakura">
+                      같이 사고 싶은 멤버
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {item.wantedBy.map((want) => (
+                        <span
+                          key={want.id}
+                          className="rounded-full bg-white px-3 py-1 text-xs font-black text-ink/70"
+                        >
+                          {want.member.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {item.imageUrl && (
                   <button
                     type="button"

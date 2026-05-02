@@ -26,7 +26,15 @@ export async function GET(_: Request, { params }: Params) {
       items: {
         include: {
           member: true,
-          category: true
+          category: true,
+          wantedBy: {
+            include: {
+              member: true
+            },
+            orderBy: {
+              createdAt: "asc"
+            }
+          }
         },
         orderBy: {
           createdAt: "desc"

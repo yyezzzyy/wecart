@@ -54,6 +54,7 @@ export default function ItemsPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [savingWantKey, setSavingWantKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (!group) return;
@@ -68,7 +69,10 @@ export default function ItemsPage() {
     if (!group) return [];
 
     return group.items.filter((item) => {
-      const memberMatches = selectedMemberId === "all" || item.memberId === selectedMemberId;
+      const memberMatches =
+        selectedMemberId === "all" ||
+        item.memberId === selectedMemberId ||
+        item.wantedBy.some((want) => want.memberId === selectedMemberId);
       const categoryMatches = selectedCategoryId === "all" || item.categoryId === selectedCategoryId;
       return memberMatches && categoryMatches;
     });
@@ -214,6 +218,23 @@ export default function ItemsPage() {
     }
   }
 
+  async function handleToggleWant(item: ShoppingItem, memberId: string) {
+    const wantKey = `${item.id}:${memberId}`;
+    const checked = !item.wantedBy.some((want) => want.memberId === memberId);
+
+    setSavingWantKey(wantKey);
+    const response = await fetch(`/api/items/${item.id}/wants`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memberId, checked })
+    });
+
+    setSavingWantKey(null);
+    if (response.ok) {
+      updateItem(await response.json());
+    }
+  }
+
   if (!group) return null;
 
   return (
@@ -260,7 +281,15 @@ export default function ItemsPage() {
 
       <div className="mt-4 space-y-4">
         {filteredItems.map((item) => (
-          <ItemCard key={item.id} item={item} onToggle={() => togglePurchased(item)} onEdit={() => openEditModal(item)} />
+          <ItemCard
+            key={item.id}
+            item={item}
+            members={group.members}
+            savingWantKey={savingWantKey}
+            onToggle={() => togglePurchased(item)}
+            onEdit={() => openEditModal(item)}
+            onToggleWant={(memberId) => handleToggleWant(item, memberId)}
+          />
         ))}
 
         {filteredItems.length === 0 && (

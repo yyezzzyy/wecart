@@ -25,6 +25,7 @@ export type ShoppingItem = {
   updatedAt: string;
   member: Member;
   category: Category;
+  wantedBy: ShoppingItemWant[];
 };
 
 export type GroupDetail = {
@@ -33,4 +34,12 @@ export type GroupDetail = {
   members: Member[];
   categories: Category[];
   items: ShoppingItem[];
+};
+
+export type ShoppingItemWant = {
+  id: string;
+  itemId: string;
+  memberId: string;
+  createdAt: string;
+  member: Member;
 };

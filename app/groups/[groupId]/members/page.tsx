@@ -14,7 +14,11 @@ export default function MembersPage() {
     if (!group) return [];
 
     return group.members.map((member) => {
-      const items = group.items.filter((item) => item.memberId === member.id);
+      const items = group.items.filter(
+        (item) =>
+          item.memberId === member.id ||
+          item.wantedBy.some((want) => want.memberId === member.id)
+      );
       const purchasedCount = items.filter((item) => item.isPurchased).length;
 
       return {

@@ -50,7 +50,15 @@ export async function PATCH(request: Request, { params }: Params) {
     data,
     include: {
       member: true,
-      category: true
+      category: true,
+      wantedBy: {
+        include: {
+          member: true
+        },
+        orderBy: {
+          createdAt: "asc"
+        }
+      }
     }
   });
 
