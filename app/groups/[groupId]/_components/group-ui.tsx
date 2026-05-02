@@ -445,62 +445,6 @@ export function ItemCard({
             </button>
           </div>
 
-          {members && members.length > 0 && onToggleWant && (
-            <div className="mt-3 rounded-[20px] border-2 border-cream bg-ivory p-2">
-              <div className="mb-2 flex items-center justify-between gap-2 px-1">
-                <p className="text-xs font-black text-ink/50">멤버 체크</p>
-                <p className="text-xs font-black text-sakura">
-                  {checkedMemberCount}명
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {members.map((member) => {
-                  const isOwner = item.memberId === member.id;
-                  const isChecked =
-                    isOwner || item.wantedBy.some((want) => want.memberId === member.id);
-                  const wantKey = `${item.id}:${member.id}`;
-                  const isSaving = savingWantKey === wantKey;
-                  const hasLeadingIcon = isChecked || isSaving;
-
-                  return (
-                    <button
-                      key={member.id}
-                      type="button"
-                      onClick={() => {
-                        if (!isOwner) onToggleWant(member.id);
-                      }}
-                      disabled={isOwner || savingWantKey === wantKey}
-                      className={clsx(
-                        'inline-flex h-10 items-center justify-center rounded-full border-2 px-4 text-sm font-black transition active:scale-95 disabled:opacity-80',
-                        hasLeadingIcon && 'gap-2 pl-3',
-                        isChecked
-                          ? 'border-sakura bg-sakura text-white'
-                          : 'border-ink/10 bg-white text-ink/62',
-                        isOwner && 'cursor-default border-mint bg-mint text-ink',
-                      )}
-                    >
-                      {hasLeadingIcon && (
-                        <span
-                          className={clsx(
-                            'grid h-5 w-5 place-items-center rounded-full',
-                            isOwner || isSaving ? 'bg-white text-ink' : 'bg-white/24',
-                          )}
-                        >
-                          {isSaving ? (
-                            <LoaderCircle className="animate-spin" size={14} />
-                          ) : (
-                            <Check size={14} strokeWidth={4} />
-                          )}
-                        </span>
-                      )}
-                      <span className="max-w-24 truncate">{member.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           <div
             className={clsx(
               'grid transition-[grid-template-rows,opacity] duration-300 ease-out',
@@ -511,6 +455,62 @@ export function ItemCard({
           >
             <div className="min-h-0 overflow-hidden">
               <div className="mt-3 border-t-2 border-cream pt-4">
+                {members && members.length > 0 && onToggleWant && (
+                  <div className="mb-4 rounded-[20px] border-2 border-cream bg-ivory p-2">
+                    <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                      <p className="text-xs font-black text-ink/50">멤버 체크</p>
+                      <p className="text-xs font-black text-sakura">
+                        {checkedMemberCount}명
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {members.map((member) => {
+                        const isOwner = item.memberId === member.id;
+                        const isChecked =
+                          isOwner || item.wantedBy.some((want) => want.memberId === member.id);
+                        const wantKey = `${item.id}:${member.id}`;
+                        const isSaving = savingWantKey === wantKey;
+                        const hasLeadingIcon = isChecked || isSaving;
+
+                        return (
+                          <button
+                            key={member.id}
+                            type="button"
+                            onClick={() => {
+                              if (!isOwner) onToggleWant(member.id);
+                            }}
+                            disabled={isOwner || savingWantKey === wantKey}
+                            className={clsx(
+                              'inline-flex h-10 items-center justify-center rounded-full border-2 px-4 text-sm font-black transition active:scale-95 disabled:opacity-80',
+                              hasLeadingIcon && 'gap-2 pl-3',
+                              isChecked
+                                ? 'border-sakura bg-sakura text-white'
+                                : 'border-ink/10 bg-white text-ink/62',
+                              isOwner && 'cursor-default border-mint bg-mint text-ink',
+                            )}
+                          >
+                            {hasLeadingIcon && (
+                              <span
+                                className={clsx(
+                                  'grid h-5 w-5 place-items-center rounded-full',
+                                  isOwner || isSaving ? 'bg-white text-ink' : 'bg-white/24',
+                                )}
+                              >
+                                {isSaving ? (
+                                  <LoaderCircle className="animate-spin" size={14} />
+                                ) : (
+                                  <Check size={14} strokeWidth={4} />
+                                )}
+                              </span>
+                            )}
+                            <span className="max-w-24 truncate">{member.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {item.wantedBy.length > 0 && (
                   <div className="mb-4 rounded-[20px] bg-sakura/10 px-3 py-3">
                     <p className="text-xs font-black text-sakura">
