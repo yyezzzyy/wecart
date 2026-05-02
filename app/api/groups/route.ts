@@ -23,18 +23,9 @@ export async function POST(request: Request) {
     },
     include: {
       members: true,
-      categories: true,
-      items: {
-        include: {
-          member: true,
-          category: true
-        },
-        orderBy: {
-          createdAt: "desc"
-        }
-      }
+      categories: true
     }
   });
 
-  return NextResponse.json(group);
+  return NextResponse.json({ ...group, items: [] });
 }

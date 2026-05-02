@@ -14,6 +14,9 @@ export default function CategoriesPage() {
   const [editingCategoryName, setEditingCategoryName] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [savingWantKey, setSavingWantKey] = useState<string | null>(null);
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [savingCategoryId, setSavingCategoryId] = useState<string | null>(null);
+  const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
 
   const selectedCategory = useMemo(() => {
     if (!group) return null;
@@ -28,47 +31,64 @@ export default function CategoriesPage() {
   async function handleCreateCategory(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const name = categoryName.trim();
-    if (!group || !name) return;
+    if (!group || !name || isCreatingCategory) return;
 
-    const response = await fetch(`/api/groups/${group.id}/categories`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name })
-    });
+    setIsCreatingCategory(true);
+    try {
+      const response = await fetch(`/api/groups/${group.id}/categories`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+      });
 
-    if (response.ok) {
-      addCategory(await response.json());
-      setCategoryName("");
+      if (response.ok) {
+        addCategory(await response.json());
+        setCategoryName("");
+      }
+    } finally {
+      setIsCreatingCategory(false);
     }
   }
 
   async function handleUpdateCategory(categoryId: string) {
     const name = editingCategoryName.trim();
-    if (!name) return;
+    if (!name || savingCategoryId) return;
 
-    const response = await fetch(`/api/categories/${categoryId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name })
-    });
+    setSavingCategoryId(categoryId);
+    try {
+      const response = await fetch(`/api/categories/${categoryId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+      });
 
-    if (response.ok) {
-      updateCategory(await response.json());
-      setEditingCategoryId(null);
-      setEditingCategoryName("");
+      if (response.ok) {
+        updateCategory(await response.json());
+        setEditingCategoryId(null);
+        setEditingCategoryName("");
+      }
+    } finally {
+      setSavingCategoryId(null);
     }
   }
 
   async function handleDeleteCategory(categoryId: string) {
-    const response = await fetch(`/api/categories/${categoryId}`, {
-      method: "DELETE"
-    });
+    if (deletingCategoryId) return;
 
-    if (response.ok) {
-      removeCategory(categoryId);
-      if (selectedCategoryId === categoryId) {
-        setSelectedCategoryId(null);
+    setDeletingCategoryId(categoryId);
+    try {
+      const response = await fetch(`/api/categories/${categoryId}`, {
+        method: "DELETE"
+      });
+
+      if (response.ok) {
+        removeCategory(categoryId);
+        if (selectedCategoryId === categoryId) {
+          setSelectedCategoryId(null);
+        }
       }
+    } finally {
+      setDeletingCategoryId(null);
     }
   }
 
@@ -98,17 +118,20 @@ export default function CategoriesPage() {
 
     updateItem(optimisticItem);
     setSavingWantKey(wantKey);
-    const response = await fetch(`/api/items/${item.id}/wants`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ memberId, checked })
-    });
+    try {
+      const response = await fetch(`/api/items/${item.id}/wants`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId, checked })
+      });
 
-    setSavingWantKey(null);
-    if (response.ok) {
-      updateItem(await response.json());
-    } else {
+      if (!response.ok) {
+        updateItem(item);
+      }
+    } catch {
       updateItem(item);
+    } finally {
+      setSavingWantKey(null);
     }
   }
 
@@ -125,10 +148,14 @@ export default function CategoriesPage() {
             value={categoryName}
             onChange={(event) => setCategoryName(event.target.value)}
             placeholder="새 카테고리"
-            className="h-12 min-w-0 flex-1 rounded-2xl border-2 border-ink/10 bg-cream px-3 text-sm font-bold outline-none focus:border-sakura"
+            disabled={isCreatingCategory}
+            className="h-12 min-w-0 flex-1 rounded-2xl border-2 border-ink/10 bg-cream px-3 text-sm font-bold outline-none focus:border-sakura disabled:opacity-60"
           />
-          <button className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-mint text-ink">
-            <Plus size={20} />
+          <button
+            disabled={isCreatingCategory || !categoryName.trim()}
+            className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-mint text-ink disabled:opacity-50"
+          >
+            {isCreatingCategory ? <LoaderCircle className="animate-spin" size={20} /> : <Plus size={20} />}
           </button>
         </form>
       </section>
@@ -142,6 +169,8 @@ export default function CategoriesPage() {
             itemCount={group.items.filter((item) => item.categoryId === category.id).length}
             editingCategoryId={editingCategoryId}
             editingCategoryName={editingCategoryName}
+            isSaving={savingCategoryId === category.id}
+            isDeleting={deletingCategoryId === category.id}
             onSelect={() => setSelectedCategoryId(category.id)}
             onEdit={() => {
               setEditingCategoryId(category.id);

@@ -11,6 +11,7 @@ import {
   AddItemButton,
   AddItemModal,
   CategoryChip,
+  DeleteItemConfirmModal,
   EmptyState,
   FilterChip,
   ItemCard
@@ -25,6 +26,8 @@ type ItemForm = {
   mapUrl: string;
   referenceUrl: string;
 };
+
+type ItemResponse = Omit<ShoppingItem, "member" | "category" | "wantedBy">;
 
 const emptyForm: ItemForm = {
   name: "",
@@ -56,6 +59,8 @@ export default function ItemsPage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [savingWantKey, setSavingWantKey] = useState<string | null>(null);
+  const [purchasingItemId, setPurchasingItemId] = useState<string | null>(null);
+  const [deleteTargetItem, setDeleteTargetItem] = useState<ShoppingItem | null>(null);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -80,6 +85,21 @@ export default function ItemsPage() {
     });
   }, [group, selectedCategoryId, selectedMemberId]);
 
+  function hydrateItem(item: ItemResponse, previousItem?: ShoppingItem): ShoppingItem | null {
+    if (!group) return null;
+
+    const member = group.members.find((entry) => entry.id === item.memberId);
+    const category = group.categories.find((entry) => entry.id === item.categoryId);
+    if (!member || !category) return null;
+
+    return {
+      ...item,
+      member,
+      category,
+      wantedBy: previousItem?.wantedBy ?? []
+    };
+  }
+
   async function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -98,14 +118,21 @@ export default function ItemsPage() {
       return;
     }
 
-    const response = await fetch("/api/upload", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fileName: uploadFile.name,
-        contentType: uploadFile.type
-      })
-    });
+    let response: Response;
+    try {
+      response = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileName: uploadFile.name,
+          contentType: uploadFile.type
+        })
+      });
+    } catch {
+      setUploadError("업로드 준비에 실패했어요.");
+      setIsUploadingImage(false);
+      return;
+    }
 
     if (!response.ok) {
       const data = (await response.json().catch(() => null)) as { message?: string } | null;
@@ -182,41 +209,58 @@ export default function ItemsPage() {
     if (!group || !form.name.trim() || !form.categoryId || !form.memberId || isSavingItem) return;
 
     setIsSavingItem(true);
-    const response = await fetch(
-      editingItem ? `/api/items/${editingItem.id}` : `/api/groups/${params.groupId}/items`,
-      {
-        method: editingItem ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
-      }
-    );
+    try {
+      const response = await fetch(
+        editingItem ? `/api/items/${editingItem.id}` : `/api/groups/${params.groupId}/items`,
+        {
+          method: editingItem ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form)
+        }
+      );
 
-    setIsSavingItem(false);
-    if (response.ok) {
-      const item = await response.json();
-      if (editingItem) {
-        updateItem(item);
-      } else {
-        addItem(item);
+      if (response.ok) {
+        const item = hydrateItem(await response.json(), editingItem ?? undefined);
+        if (!item) return;
+
+        if (editingItem) {
+          updateItem(item);
+        } else {
+          addItem(item);
+        }
+        setForm({
+          ...emptyForm,
+          categoryId: group.categories[0]?.id || "",
+          memberId: group.members[0]?.id || ""
+        });
+        closeItemModal();
       }
-      setForm({
-        ...emptyForm,
-        categoryId: group.categories[0]?.id || "",
-        memberId: group.members[0]?.id || ""
-      });
-      closeItemModal();
+    } finally {
+      setIsSavingItem(false);
     }
   }
 
   async function togglePurchased(item: ShoppingItem) {
-    const response = await fetch(`/api/items/${item.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isPurchased: !item.isPurchased })
-    });
+    if (purchasingItemId) return;
 
-    if (response.ok) {
-      updateItem(await response.json());
+    const optimisticItem = { ...item, isPurchased: !item.isPurchased };
+
+    updateItem(optimisticItem);
+    setPurchasingItemId(item.id);
+    try {
+      const response = await fetch(`/api/items/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isPurchased: optimisticItem.isPurchased })
+      });
+
+      if (!response.ok) {
+        updateItem(item);
+      }
+    } catch {
+      updateItem(item);
+    } finally {
+      setPurchasingItemId(null);
     }
   }
 
@@ -246,34 +290,43 @@ export default function ItemsPage() {
 
     updateItem(optimisticItem);
     setSavingWantKey(wantKey);
-    const response = await fetch(`/api/items/${item.id}/wants`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ memberId, checked })
-    });
+    try {
+      const response = await fetch(`/api/items/${item.id}/wants`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId, checked })
+      });
 
-    setSavingWantKey(null);
-    if (response.ok) {
-      updateItem(await response.json());
-    } else {
+      if (!response.ok) {
+        updateItem(item);
+      }
+    } catch {
       updateItem(item);
+    } finally {
+      setSavingWantKey(null);
     }
   }
 
-  async function handleDeleteItem(item: ShoppingItem) {
-    if (deletingItemId) return;
+  async function handleDeleteItem() {
+    if (!deleteTargetItem || selectedMemberId === "all" || deletingItemId) return;
 
-    setDeletingItemId(item.id);
-    const response = await fetch(`/api/items/${item.id}`, {
-      method: "DELETE"
-    });
+    setDeletingItemId(deleteTargetItem.id);
+    try {
+      const response = await fetch(`/api/items/${deleteTargetItem.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId: selectedMemberId })
+      });
 
-    setDeletingItemId(null);
-    if (response.ok) {
-      removeItem(item.id);
-      if (editingItem?.id === item.id) {
-        closeItemModal();
+      if (response.ok) {
+        removeItem(deleteTargetItem.id);
+        if (editingItem?.id === deleteTargetItem.id) {
+          closeItemModal();
+        }
+        setDeleteTargetItem(null);
       }
+    } finally {
+      setDeletingItemId(null);
     }
   }
 
@@ -322,19 +375,23 @@ export default function ItemsPage() {
       </div>
 
       <div className="mt-4 space-y-4">
-        {filteredItems.map((item) => (
-          <ItemCard
-            key={item.id}
-            item={item}
-            members={group.members}
-            savingWantKey={savingWantKey}
-            isDeleting={deletingItemId === item.id}
-            onToggle={() => togglePurchased(item)}
-            onEdit={() => openEditModal(item)}
-            onToggleWant={(memberId) => handleToggleWant(item, memberId)}
-            onDelete={() => handleDeleteItem(item)}
-          />
-        ))}
+        {filteredItems.map((item) => {
+          const canDeleteItem = selectedMemberId !== "all" && item.memberId === selectedMemberId;
+
+          return (
+            <ItemCard
+              key={item.id}
+              item={item}
+              members={group.members}
+              savingWantKey={savingWantKey}
+              purchasingItemId={purchasingItemId}
+              onToggle={() => togglePurchased(item)}
+              onEdit={() => openEditModal(item)}
+              onToggleWant={(memberId) => handleToggleWant(item, memberId)}
+              onDelete={canDeleteItem ? () => setDeleteTargetItem(item) : undefined}
+            />
+          );
+        })}
 
         {filteredItems.length === 0 && (
           <EmptyState title="아직 담긴 아이템이 없어요" description="추가 버튼으로 첫 쇼핑템을 담아봐요." />
@@ -366,6 +423,17 @@ export default function ItemsPage() {
           onImageChange={handleImageChange}
           uploadError={uploadError}
           isUploadingImage={isUploadingImage}
+        />
+      )}
+
+      {deleteTargetItem && (
+        <DeleteItemConfirmModal
+          item={deleteTargetItem}
+          isDeleting={deletingItemId === deleteTargetItem.id}
+          onClose={() => {
+            if (!deletingItemId) setDeleteTargetItem(null);
+          }}
+          onConfirm={handleDeleteItem}
         />
       )}
     </div>

@@ -47,30 +47,29 @@ export async function PATCH(request: Request, { params }: Params) {
     where: {
       id: params.itemId
     },
-    data,
-    include: {
-      member: true,
-      category: true,
-      wantedBy: {
-        include: {
-          member: true
-        },
-        orderBy: {
-          createdAt: "asc"
-        }
-      }
-    }
+    data
   });
 
   return NextResponse.json(item);
 }
 
-export async function DELETE(_: Request, { params }: Params) {
-  await prisma.shoppingItem.delete({
+export async function DELETE(request: Request, { params }: Params) {
+  const body = (await request.json().catch(() => null)) as { memberId?: string } | null;
+
+  if (!body?.memberId) {
+    return NextResponse.json({ message: "Member is required." }, { status: 400 });
+  }
+
+  const result = await prisma.shoppingItem.deleteMany({
     where: {
-      id: params.itemId
+      id: params.itemId,
+      memberId: body.memberId
     }
   });
+
+  if (result.count === 0) {
+    return NextResponse.json({ message: "Only the owner can delete this item." }, { status: 403 });
+  }
 
   return NextResponse.json({ ok: true });
 }

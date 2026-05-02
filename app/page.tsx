@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Database, ShoppingBag, Sparkles, Ticket } from "lucide-react";
+import { Database, LoaderCircle, Sparkles, Ticket } from "lucide-react";
 
 type BootstrapResponse =
   | {
@@ -70,7 +70,7 @@ export default function HomePage() {
         </div>
 
         <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-ink px-4 py-3 text-sm font-black text-white">
-          <ShoppingBag size={18} />
+          <LoaderCircle className="animate-spin" size={18} />
           리스트 준비 중
         </div>
       </div>

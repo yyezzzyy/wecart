@@ -12,8 +12,13 @@ export async function GET() {
         some: {}
       }
     },
-    include: {
-      categories: true
+    select: {
+      id: true,
+      _count: {
+        select: {
+          categories: true
+        }
+      }
     },
     orderBy: {
       createdAt: "asc"
@@ -27,7 +32,7 @@ export async function GET() {
     );
   }
 
-  if (group.categories.length === 0) {
+  if (group._count.categories === 0) {
     await prisma.category.createMany({
       data: defaultCategories.map((name) => ({
         name,

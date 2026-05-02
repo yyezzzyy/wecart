@@ -47,7 +47,7 @@ export function GroupLoading() {
   return (
     <div className="grid min-h-dvh place-items-center px-6">
       <div className="rounded-[30px] bg-white/80 p-6 text-center shadow-sticker">
-        <ShoppingBag className="mx-auto mb-3 text-sakura" size={34} />
+        <LoaderCircle className="mx-auto mb-3 animate-spin text-sakura" size={34} />
         <p className="font-black">리스트를 꺼내는 중...</p>
       </div>
     </div>
@@ -246,6 +246,8 @@ export function CategoryManager({
   active,
   editingCategoryId,
   editingCategoryName,
+  isSaving,
+  isDeleting,
   onSelect,
   onEdit,
   onNameChange,
@@ -258,6 +260,8 @@ export function CategoryManager({
   active?: boolean;
   editingCategoryId: string | null;
   editingCategoryName: string;
+  isSaving?: boolean;
+  isDeleting?: boolean;
   onSelect?: () => void;
   onEdit: () => void;
   onNameChange: (name: string) => void;
@@ -266,6 +270,7 @@ export function CategoryManager({
   onDelete: () => void;
 }) {
   const isEditing = editingCategoryId === category.id;
+  const isBusy = Boolean(isSaving || isDeleting);
 
   return (
     <div
@@ -288,7 +293,8 @@ export function CategoryManager({
           <input
             value={editingCategoryName}
             onChange={(event) => onNameChange(event.target.value)}
-            className="h-11 min-w-0 flex-1 rounded-2xl border-2 border-sakura bg-ivory px-3 text-sm font-bold outline-none"
+            disabled={isBusy}
+            className="h-11 min-w-0 flex-1 rounded-2xl border-2 border-sakura bg-ivory px-3 text-sm font-bold outline-none disabled:opacity-60"
           />
         ) : (
           <div className="min-w-0 flex-1">
@@ -307,9 +313,10 @@ export function CategoryManager({
                 event.stopPropagation();
                 onSave();
               }}
-              className="grid h-11 w-11 place-items-center rounded-2xl bg-mint"
+              disabled={isBusy}
+              className="grid h-11 w-11 place-items-center rounded-2xl bg-mint disabled:opacity-50"
             >
-              <Check size={18} />
+              {isSaving ? <LoaderCircle className="animate-spin" size={18} /> : <Check size={18} />}
             </button>
             <button
               type="button"
@@ -317,7 +324,8 @@ export function CategoryManager({
                 event.stopPropagation();
                 onCancel();
               }}
-              className="grid h-11 w-11 place-items-center rounded-2xl bg-cream"
+              disabled={isBusy}
+              className="grid h-11 w-11 place-items-center rounded-2xl bg-cream disabled:opacity-50"
             >
               <X size={18} />
             </button>
@@ -330,7 +338,8 @@ export function CategoryManager({
                 event.stopPropagation();
                 onEdit();
               }}
-              className="grid h-11 w-11 place-items-center rounded-2xl bg-cream"
+              disabled={isBusy}
+              className="grid h-11 w-11 place-items-center rounded-2xl bg-cream disabled:opacity-50"
             >
               <Pencil size={17} />
             </button>
@@ -340,9 +349,10 @@ export function CategoryManager({
                 event.stopPropagation();
                 onDelete();
               }}
-              className="grid h-11 w-11 place-items-center rounded-2xl bg-peach/80"
+              disabled={isBusy}
+              className="grid h-11 w-11 place-items-center rounded-2xl bg-peach/80 disabled:opacity-50"
             >
-              <Trash2 size={17} />
+              {isDeleting ? <LoaderCircle className="animate-spin" size={17} /> : <Trash2 size={17} />}
             </button>
           </>
         )}
@@ -355,7 +365,7 @@ export function ItemCard({
   item,
   members,
   savingWantKey,
-  isDeleting,
+  purchasingItemId,
   onToggle,
   onEdit,
   onToggleWant,
@@ -364,7 +374,7 @@ export function ItemCard({
   item: ShoppingItem;
   members?: Member[];
   savingWantKey?: string | null;
-  isDeleting?: boolean;
+  purchasingItemId?: string | null;
   onToggle: () => void;
   onEdit: () => void;
   onToggleWant?: (memberId: string) => void;
@@ -372,11 +382,11 @@ export function ItemCard({
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
-  const [isDeleteConfirming, setIsDeleteConfirming] = useState(false);
   const checkedMemberCount = new Set([
     item.memberId,
     ...item.wantedBy.map((want) => want.memberId),
   ]).size;
+  const isTogglingPurchased = purchasingItemId === item.id;
 
   return (
     <>
@@ -419,15 +429,20 @@ export function ItemCard({
             <button
               type="button"
               onClick={onToggle}
+              disabled={isTogglingPurchased}
               className={clsx(
-                'grid h-11 w-11 place-items-center rounded-2xl border-2 transition active:scale-95',
+                'grid h-11 w-11 place-items-center rounded-2xl border-2 transition active:scale-95 disabled:opacity-70',
                 item.isPurchased
                   ? 'border-mint bg-mint'
                   : 'border-ink/10 bg-cream',
               )}
               aria-label={`${item.name} 구매 완료`}
             >
-              <Check size={21} strokeWidth={4} />
+              {isTogglingPurchased ? (
+                <LoaderCircle className="animate-spin" size={20} />
+              ) : (
+                <Check size={21} strokeWidth={4} />
+              )}
             </button>
             <button
               type="button"
@@ -602,43 +617,14 @@ export function ItemCard({
 
                 {onDelete && (
                   <div className="mt-4 border-t-2 border-cream pt-3">
-                    {isDeleteConfirming ? (
-                      <div className="rounded-[20px] bg-peach/35 p-3">
-                        <p className="text-sm font-black text-ink">
-                          이 쇼핑템을 삭제할까요?
-                        </p>
-                        <div className="mt-3 grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setIsDeleteConfirming(false)}
-                            disabled={isDeleting}
-                            className="h-11 rounded-2xl bg-white text-sm font-black text-ink disabled:opacity-50"
-                          >
-                            취소
-                          </button>
-                          <button
-                            type="button"
-                            onClick={onDelete}
-                            disabled={isDeleting}
-                            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-peach text-sm font-black text-ink disabled:opacity-50"
-                          >
-                            {isDeleting && (
-                              <LoaderCircle className="animate-spin" size={16} />
-                            )}
-                            삭제
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setIsDeleteConfirming(true)}
-                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border-2 border-peach bg-white text-sm font-black text-ink transition active:scale-[0.99]"
-                      >
-                        <Trash2 size={16} />
-                        쇼핑템 삭제
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={onDelete}
+                      className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border-2 border-peach bg-white text-sm font-black text-ink transition active:scale-[0.99]"
+                    >
+                      <Trash2 size={16} />
+                      쇼핑템 삭제
+                    </button>
                   </div>
                 )}
               </div>
@@ -674,6 +660,74 @@ export function ItemCard({
         </div>
       )}
     </>
+  );
+}
+
+export function DeleteItemConfirmModal({
+  item,
+  isDeleting,
+  onClose,
+  onConfirm,
+}: {
+  item: ShoppingItem;
+  isDeleting: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-40 grid place-items-center bg-ink/35 px-4 py-6 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${item.name} 삭제 확인`}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[360px] rounded-[28px] bg-ivory p-4 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="relative pt-1 text-center">
+          <p className="text-xs font-black text-sakura">DELETE ITEM</p>
+          <h2 className="mt-1 break-words px-8 text-xl font-black">
+            이 쇼핑템을 삭제할게요?
+          </h2>
+          <div className="mt-3 flex justify-center">
+            <p className="max-w-full break-words rounded-2xl bg-white px-4 py-2 text-center text-sm font-black leading-6 text-ink/70">
+              {item.name}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isDeleting}
+            className="absolute right-0 top-0 grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white disabled:opacity-50"
+            aria-label="삭제 확인 닫기"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isDeleting}
+            className="h-12 rounded-[20px] bg-white text-sm font-black text-ink disabled:opacity-50"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isDeleting}
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-[20px] bg-peach text-sm font-black text-ink disabled:opacity-50"
+          >
+            {isDeleting && <LoaderCircle className="animate-spin" size={16} />}
+            삭제
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -755,7 +809,8 @@ export function AddItemModal({
           <button
             type="button"
             onClick={onClose}
-            className="grid h-10 w-10 place-items-center rounded-full bg-white"
+            disabled={isSaving || isUploadingImage}
+            className="grid h-10 w-10 place-items-center rounded-full bg-white disabled:opacity-50"
           >
             <X size={20} />
           </button>
@@ -882,8 +937,11 @@ export function AddItemModal({
             !form.categoryId ||
             !form.memberId
           }
-          className="mt-4 h-14 w-full rounded-[22px] bg-ink text-base font-black text-white disabled:bg-ink/30"
+          className="mt-4 inline-flex h-14 w-full items-center justify-center gap-2 rounded-[22px] bg-ink text-base font-black text-white disabled:bg-ink/30"
         >
+          {(isUploadingImage || isSaving) && (
+            <LoaderCircle className="animate-spin" size={18} />
+          )}
           {isUploadingImage
             ? '이미지 업로드 중...'
             : isSaving

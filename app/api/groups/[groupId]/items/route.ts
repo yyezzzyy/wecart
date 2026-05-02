@@ -33,18 +33,6 @@ export async function POST(request: Request, { params }: Params) {
       memberId: body.memberId,
       categoryId: body.categoryId
     },
-    include: {
-      member: true,
-      category: true,
-      wantedBy: {
-        include: {
-          member: true
-        },
-        orderBy: {
-          createdAt: "asc"
-        }
-      }
-    }
   });
 
   return NextResponse.json(item);

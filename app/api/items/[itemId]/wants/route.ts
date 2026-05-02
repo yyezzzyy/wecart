@@ -40,27 +40,5 @@ export async function PATCH(request: Request, { params }: Params) {
     });
   }
 
-  const item = await prisma.shoppingItem.findUnique({
-    where: {
-      id: params.itemId
-    },
-    include: {
-      member: true,
-      category: true,
-      wantedBy: {
-        include: {
-          member: true
-        },
-        orderBy: {
-          createdAt: "asc"
-        }
-      }
-    }
-  });
-
-  if (!item) {
-    return NextResponse.json({ message: "Item not found." }, { status: 404 });
-  }
-
-  return NextResponse.json(item);
+  return NextResponse.json({ ok: true });
 }
