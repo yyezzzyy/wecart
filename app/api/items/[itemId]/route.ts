@@ -64,3 +64,13 @@ export async function PATCH(request: Request, { params }: Params) {
 
   return NextResponse.json(item);
 }
+
+export async function DELETE(_: Request, { params }: Params) {
+  await prisma.shoppingItem.delete({
+    where: {
+      id: params.itemId
+    }
+  });
+
+  return NextResponse.json({ ok: true });
+}

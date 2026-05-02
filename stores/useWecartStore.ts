@@ -17,6 +17,7 @@ type WecartState = {
   removeCategory: (categoryId: string) => void;
   addItem: (item: ShoppingItem) => void;
   updateItem: (item: ShoppingItem) => void;
+  removeItem: (itemId: string) => void;
 };
 
 export const useWecartStore = create<WecartState>((set) => ({
@@ -69,6 +70,17 @@ export const useWecartStore = create<WecartState>((set) => ({
             group: {
               ...state.group,
               items: state.group.items.map((entry) => (entry.id === item.id ? item : entry))
+            }
+          }
+        : state
+    ),
+  removeItem: (itemId) =>
+    set((state) =>
+      state.group
+        ? {
+            group: {
+              ...state.group,
+              items: state.group.items.filter((entry) => entry.id !== itemId)
             }
           }
         : state

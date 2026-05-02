@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { Check, Plus, UserRound } from "lucide-react";
+import { Check, LoaderCircle, Plus, UserRound } from "lucide-react";
 import clsx from "clsx";
 import { useWecartStore } from "@/stores/useWecartStore";
 import { CategoryManager, EmptyState } from "../_components/group-ui";
@@ -73,9 +73,30 @@ export default function CategoriesPage() {
   }
 
   async function handleToggleWant(item: ShoppingItem, memberId: string) {
+    if (!group) return;
+
     const wantKey = `${item.id}:${memberId}`;
     const checked = !item.wantedBy.some((want) => want.memberId === memberId);
+    const member = group.members.find((entry) => entry.id === memberId);
+    if (!member) return;
 
+    const optimisticItem: ShoppingItem = {
+      ...item,
+      wantedBy: checked
+        ? [
+            ...item.wantedBy,
+            {
+              id: `optimistic-${wantKey}`,
+              itemId: item.id,
+              memberId,
+              createdAt: new Date().toISOString(),
+              member
+            }
+          ]
+        : item.wantedBy.filter((want) => want.memberId !== memberId)
+    };
+
+    updateItem(optimisticItem);
     setSavingWantKey(wantKey);
     const response = await fetch(`/api/items/${item.id}/wants`, {
       method: "PATCH",
@@ -86,6 +107,8 @@ export default function CategoriesPage() {
     setSavingWantKey(null);
     if (response.ok) {
       updateItem(await response.json());
+    } else {
+      updateItem(item);
     }
   }
 
@@ -168,6 +191,8 @@ export default function CategoriesPage() {
                   const isOwner = item.memberId === member.id;
                   const isChecked = isOwner || item.wantedBy.some((want) => want.memberId === member.id);
                   const wantKey = `${item.id}:${member.id}`;
+                  const isSaving = savingWantKey === wantKey;
+                  const hasLeadingIcon = isChecked || isSaving;
 
                   return (
                     <button
@@ -179,21 +204,25 @@ export default function CategoriesPage() {
                       }}
                       className={clsx(
                         "inline-flex h-10 items-center justify-center rounded-full border-2 px-4 text-sm font-black transition active:scale-95 disabled:opacity-80",
-                        isChecked && "gap-2 pl-3",
+                        hasLeadingIcon && "gap-2 pl-3",
                         isChecked
                           ? "border-sakura bg-sakura text-white"
                           : "border-ink/10 bg-white text-ink/62",
                         isOwner && "cursor-default border-mint bg-mint text-ink"
                       )}
                     >
-                      {isChecked && (
+                      {hasLeadingIcon && (
                         <span
                           className={clsx(
                             "grid h-5 w-5 place-items-center rounded-full",
-                            isOwner ? "bg-white text-ink" : "bg-white/24"
+                            isOwner || isSaving ? "bg-white text-ink" : "bg-white/24"
                           )}
                         >
-                          <Check size={14} strokeWidth={4} />
+                          {isSaving ? (
+                            <LoaderCircle className="animate-spin" size={14} />
+                          ) : (
+                            <Check size={14} strokeWidth={4} />
+                          )}
                         </span>
                       )}
                       {member.name}

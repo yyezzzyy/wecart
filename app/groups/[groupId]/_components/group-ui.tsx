@@ -10,6 +10,7 @@ import {
   CirclePlus,
   ImagePlus,
   LayoutGrid,
+  LoaderCircle,
   MapPin,
   Newspaper,
   ExternalLink,
@@ -354,19 +355,24 @@ export function ItemCard({
   item,
   members,
   savingWantKey,
+  isDeleting,
   onToggle,
   onEdit,
   onToggleWant,
+  onDelete,
 }: {
   item: ShoppingItem;
   members?: Member[];
   savingWantKey?: string | null;
+  isDeleting?: boolean;
   onToggle: () => void;
   onEdit: () => void;
   onToggleWant?: (memberId: string) => void;
+  onDelete?: () => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
+  const [isDeleteConfirming, setIsDeleteConfirming] = useState(false);
   const checkedMemberCount = new Set([
     item.memberId,
     ...item.wantedBy.map((want) => want.memberId),
@@ -453,6 +459,8 @@ export function ItemCard({
                   const isChecked =
                     isOwner || item.wantedBy.some((want) => want.memberId === member.id);
                   const wantKey = `${item.id}:${member.id}`;
+                  const isSaving = savingWantKey === wantKey;
+                  const hasLeadingIcon = isChecked || isSaving;
 
                   return (
                     <button
@@ -464,21 +472,25 @@ export function ItemCard({
                       disabled={isOwner || savingWantKey === wantKey}
                       className={clsx(
                         'inline-flex h-10 items-center justify-center rounded-full border-2 px-4 text-sm font-black transition active:scale-95 disabled:opacity-80',
-                        isChecked && 'gap-2 pl-3',
+                        hasLeadingIcon && 'gap-2 pl-3',
                         isChecked
                           ? 'border-sakura bg-sakura text-white'
                           : 'border-ink/10 bg-white text-ink/62',
                         isOwner && 'cursor-default border-mint bg-mint text-ink',
                       )}
                     >
-                      {isChecked && (
+                      {hasLeadingIcon && (
                         <span
                           className={clsx(
                             'grid h-5 w-5 place-items-center rounded-full',
-                            isOwner ? 'bg-white text-ink' : 'bg-white/24',
+                            isOwner || isSaving ? 'bg-white text-ink' : 'bg-white/24',
                           )}
                         >
-                          <Check size={14} strokeWidth={4} />
+                          {isSaving ? (
+                            <LoaderCircle className="animate-spin" size={14} />
+                          ) : (
+                            <Check size={14} strokeWidth={4} />
+                          )}
                         </span>
                       )}
                       <span className="max-w-24 truncate">{member.name}</span>
@@ -584,6 +596,48 @@ export function ItemCard({
                         참고
                         <ExternalLink size={13} />
                       </a>
+                    )}
+                  </div>
+                )}
+
+                {onDelete && (
+                  <div className="mt-4 border-t-2 border-cream pt-3">
+                    {isDeleteConfirming ? (
+                      <div className="rounded-[20px] bg-peach/35 p-3">
+                        <p className="text-sm font-black text-ink">
+                          이 쇼핑템을 삭제할까요?
+                        </p>
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setIsDeleteConfirming(false)}
+                            disabled={isDeleting}
+                            className="h-11 rounded-2xl bg-white text-sm font-black text-ink disabled:opacity-50"
+                          >
+                            취소
+                          </button>
+                          <button
+                            type="button"
+                            onClick={onDelete}
+                            disabled={isDeleting}
+                            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-peach text-sm font-black text-ink disabled:opacity-50"
+                          >
+                            {isDeleting && (
+                              <LoaderCircle className="animate-spin" size={16} />
+                            )}
+                            삭제
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setIsDeleteConfirming(true)}
+                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border-2 border-peach bg-white text-sm font-black text-ink transition active:scale-[0.99]"
+                      >
+                        <Trash2 size={16} />
+                        쇼핑템 삭제
+                      </button>
                     )}
                   </div>
                 )}

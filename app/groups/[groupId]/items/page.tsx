@@ -45,7 +45,8 @@ export default function ItemsPage() {
     setSelectedMemberId,
     setSelectedCategoryId,
     addItem,
-    updateItem
+    updateItem,
+    removeItem
   } = useWecartStore();
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null);
@@ -55,6 +56,7 @@ export default function ItemsPage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [savingWantKey, setSavingWantKey] = useState<string | null>(null);
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!group) return;
@@ -219,9 +221,30 @@ export default function ItemsPage() {
   }
 
   async function handleToggleWant(item: ShoppingItem, memberId: string) {
+    if (!group) return;
+
     const wantKey = `${item.id}:${memberId}`;
     const checked = !item.wantedBy.some((want) => want.memberId === memberId);
+    const member = group.members.find((entry) => entry.id === memberId);
+    if (!member) return;
 
+    const optimisticItem: ShoppingItem = {
+      ...item,
+      wantedBy: checked
+        ? [
+            ...item.wantedBy,
+            {
+              id: `optimistic-${wantKey}`,
+              itemId: item.id,
+              memberId,
+              createdAt: new Date().toISOString(),
+              member
+            }
+          ]
+        : item.wantedBy.filter((want) => want.memberId !== memberId)
+    };
+
+    updateItem(optimisticItem);
     setSavingWantKey(wantKey);
     const response = await fetch(`/api/items/${item.id}/wants`, {
       method: "PATCH",
@@ -232,6 +255,25 @@ export default function ItemsPage() {
     setSavingWantKey(null);
     if (response.ok) {
       updateItem(await response.json());
+    } else {
+      updateItem(item);
+    }
+  }
+
+  async function handleDeleteItem(item: ShoppingItem) {
+    if (deletingItemId) return;
+
+    setDeletingItemId(item.id);
+    const response = await fetch(`/api/items/${item.id}`, {
+      method: "DELETE"
+    });
+
+    setDeletingItemId(null);
+    if (response.ok) {
+      removeItem(item.id);
+      if (editingItem?.id === item.id) {
+        closeItemModal();
+      }
     }
   }
 
@@ -286,9 +328,11 @@ export default function ItemsPage() {
             item={item}
             members={group.members}
             savingWantKey={savingWantKey}
+            isDeleting={deletingItemId === item.id}
             onToggle={() => togglePurchased(item)}
             onEdit={() => openEditModal(item)}
             onToggleWant={(memberId) => handleToggleWant(item, memberId)}
+            onDelete={() => handleDeleteItem(item)}
           />
         ))}
 
