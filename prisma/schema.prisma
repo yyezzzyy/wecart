@@ -27,6 +27,7 @@ model Member {
   group     Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
   items     ShoppingItem[]
   wantedItems ShoppingItemWant[]
+  purchasedItems ShoppingItemPurchase[]
   createdAt DateTime       @default(now())
 
   @@map("members")
@@ -58,6 +59,7 @@ model ShoppingItem {
   member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
   category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   wantedBy    ShoppingItemWant[]
+  purchases   ShoppingItemPurchase[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -74,4 +76,18 @@ model ShoppingItemWant {
 
   @@unique([itemId, memberId])
   @@map("shopping_item_wants")
+}
+
+model ShoppingItemPurchase {
+  id          String       @id @default(cuid())
+  itemId      String
+  memberId    String
+  isPurchased Boolean      @default(false)
+  item        ShoppingItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  member      Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([itemId, memberId])
+  @@map("shopping_item_purchases")
 }

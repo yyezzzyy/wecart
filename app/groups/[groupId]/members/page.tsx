@@ -19,7 +19,9 @@ export default function MembersPage() {
           item.memberId === member.id ||
           item.wantedBy.some((want) => want.memberId === member.id)
       );
-      const purchasedCount = items.filter((item) => item.isPurchased).length;
+      const purchasedCount = items.filter((item) =>
+        item.purchases.some((purchase) => purchase.memberId === member.id && purchase.isPurchased)
+      ).length;
 
       return {
         member,

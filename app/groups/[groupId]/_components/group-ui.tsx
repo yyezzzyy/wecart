@@ -17,8 +17,10 @@ import {
   ListChecks,
   Maximize2,
   Pencil,
+  Search,
   ShoppingBag,
   Trash2,
+  UserPlus,
   UserRound,
   X,
 } from 'lucide-react';
@@ -47,7 +49,10 @@ export function GroupLoading() {
   return (
     <div className="grid min-h-dvh place-items-center px-6">
       <div className="rounded-[30px] bg-white/80 p-6 text-center shadow-sticker">
-        <LoaderCircle className="mx-auto mb-3 animate-spin text-sakura" size={34} />
+        <LoaderCircle
+          className="mx-auto mb-3 animate-spin text-sakura"
+          size={34}
+        />
         <p className="font-black">리스트를 꺼내는 중...</p>
       </div>
     </div>
@@ -168,6 +173,43 @@ export function CategoryChip({
   );
 }
 
+export function SearchBar({
+  value,
+  onChange,
+  onClear,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onClear: () => void;
+}) {
+  return (
+    <div className="mt-4 rounded-[24px] border-2 border-white bg-white/78 p-2 shadow-sticker">
+      <label className="flex h-12 items-center gap-2 rounded-[18px] bg-ivory px-3">
+        <Search className="shrink-0 text-sakura" size={19} />
+        <input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="쇼핑템 검색 (초성 가능)"
+          className="min-w-0 flex-1 bg-transparent text-sm font-black text-ink outline-none placeholder:text-ink/35"
+          autoComplete="off"
+          inputMode="search"
+        />
+
+        {value && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-ink/55"
+            aria-label="검색어 지우기"
+          >
+            <X size={17} />
+          </button>
+        )}
+      </label>
+    </div>
+  );
+}
+
 export function MemberSummaryCard({
   summary,
   active,
@@ -219,7 +261,11 @@ export function MemberSummaryCard({
             <span
               className={clsx(
                 'min-w-0 truncate text-sm font-black',
-                item.isPurchased && 'text-ink/40 line-through',
+                item.purchases.some(
+                  (purchase) =>
+                    purchase.memberId === summary.member.id &&
+                    purchase.isPurchased,
+                ) && 'text-ink/40 line-through',
               )}
             >
               {item.name}
@@ -316,7 +362,11 @@ export function CategoryManager({
               disabled={isBusy}
               className="grid h-11 w-11 place-items-center rounded-2xl bg-mint disabled:opacity-50"
             >
-              {isSaving ? <LoaderCircle className="animate-spin" size={18} /> : <Check size={18} />}
+              {isSaving ? (
+                <LoaderCircle className="animate-spin" size={18} />
+              ) : (
+                <Check size={18} />
+              )}
             </button>
             <button
               type="button"
@@ -352,7 +402,11 @@ export function CategoryManager({
               disabled={isBusy}
               className="grid h-11 w-11 place-items-center rounded-2xl bg-peach/80 disabled:opacity-50"
             >
-              {isDeleting ? <LoaderCircle className="animate-spin" size={17} /> : <Trash2 size={17} />}
+              {isDeleting ? (
+                <LoaderCircle className="animate-spin" size={17} />
+              ) : (
+                <Trash2 size={17} />
+              )}
             </button>
           </>
         )}
@@ -365,19 +419,21 @@ export function ItemCard({
   item,
   members,
   savingWantKey,
-  purchasingItemId,
-  onToggle,
+  savingPurchaseKey,
+  selectedMemberId,
   onEdit,
   onToggleWant,
+  onTogglePurchase,
   onDelete,
 }: {
   item: ShoppingItem;
   members?: Member[];
   savingWantKey?: string | null;
-  purchasingItemId?: string | null;
-  onToggle: () => void;
+  savingPurchaseKey?: string | null;
+  selectedMemberId?: string;
   onEdit: () => void;
   onToggleWant?: (memberId: string) => void;
+  onTogglePurchase?: (memberId: string) => void;
   onDelete?: () => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -386,7 +442,16 @@ export function ItemCard({
     item.memberId,
     ...item.wantedBy.map((want) => want.memberId),
   ]).size;
-  const isTogglingPurchased = purchasingItemId === item.id;
+  const purchasedMemberCount = item.purchases.filter(
+    (purchase) => purchase.isPurchased,
+  ).length;
+  const isPurchasedForSelectedMember =
+    Boolean(selectedMemberId) &&
+    selectedMemberId !== 'all' &&
+    item.purchases.some(
+      (purchase) =>
+        purchase.memberId === selectedMemberId && purchase.isPurchased,
+    );
 
   return (
     <>
@@ -394,16 +459,16 @@ export function ItemCard({
         className={clsx(
           'overflow-hidden rounded-[26px] border-2 border-white bg-white/84 shadow-sticker transition duration-300',
           isExpanded && 'translate-y-[-1px] border-sakura/30',
-          item.isPurchased && 'opacity-55',
+          isPurchasedForSelectedMember && 'opacity-60',
         )}
       >
         <div className="p-3">
-          <div className="grid min-h-[68px] grid-cols-[minmax(0,1fr)_44px_44px_44px] items-center gap-2">
+          <div className="grid min-h-[68px] grid-cols-[minmax(0,1fr)_44px_44px] items-center gap-2">
             <div className="min-w-0 flex-1">
               <p
                 className={clsx(
                   'truncate text-base font-black',
-                  item.isPurchased && 'line-through',
+                  isPurchasedForSelectedMember && 'line-through',
                 )}
               >
                 {item.name}
@@ -425,24 +490,6 @@ export function ItemCard({
               aria-label={`${item.name} 수정`}
             >
               <Pencil size={17} />
-            </button>
-            <button
-              type="button"
-              onClick={onToggle}
-              disabled={isTogglingPurchased}
-              className={clsx(
-                'grid h-11 w-11 place-items-center rounded-2xl border-2 transition active:scale-95 disabled:opacity-70',
-                item.isPurchased
-                  ? 'border-mint bg-mint'
-                  : 'border-ink/10 bg-cream',
-              )}
-              aria-label={`${item.name} 구매 완료`}
-            >
-              {isTogglingPurchased ? (
-                <LoaderCircle className="animate-spin" size={20} />
-              ) : (
-                <Check size={21} strokeWidth={4} />
-              )}
             </button>
             <button
               type="button"
@@ -470,61 +517,130 @@ export function ItemCard({
           >
             <div className="min-h-0 overflow-hidden">
               <div className="mt-3 border-t-2 border-cream pt-4">
-                {members && members.length > 0 && onToggleWant && (
-                  <div className="mb-4 rounded-[20px] border-2 border-cream bg-ivory p-2">
-                    <div className="mb-2 flex items-center justify-between gap-2 px-1">
-                      <p className="text-xs font-black text-ink/50">멤버 체크</p>
-                      <p className="text-xs font-black text-sakura">
-                        {checkedMemberCount}명
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {members.map((member) => {
-                        const isOwner = item.memberId === member.id;
-                        const isChecked =
-                          isOwner || item.wantedBy.some((want) => want.memberId === member.id);
-                        const wantKey = `${item.id}:${member.id}`;
-                        const isSaving = savingWantKey === wantKey;
-                        const hasLeadingIcon = isChecked || isSaving;
+                {members &&
+                  members.length > 0 &&
+                  onToggleWant &&
+                  onTogglePurchase && (
+                    <div className="mb-4 rounded-[20px] border-2 border-cream bg-ivory p-2">
+                      <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                        <p className="text-xs font-black text-ink/50">
+                          멤버 / 구매
+                        </p>
+                        <p className="text-xs font-black text-sakura">
+                          함께 {checkedMemberCount} · 구매{' '}
+                          {purchasedMemberCount}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {members.map((member) => {
+                          const isOwner = item.memberId === member.id;
+                          const isIncluded =
+                            isOwner ||
+                            item.wantedBy.some(
+                              (want) => want.memberId === member.id,
+                            );
+                          const isPurchased = item.purchases.some(
+                            (purchase) =>
+                              purchase.memberId === member.id &&
+                              purchase.isPurchased,
+                          );
+                          const wantKey = `${item.id}:${member.id}`;
+                          const purchaseKey = `${item.id}:${member.id}`;
+                          const isSavingWant = savingWantKey === wantKey;
+                          const isSavingPurchase =
+                            savingPurchaseKey === purchaseKey;
 
-                        return (
-                          <button
-                            key={member.id}
-                            type="button"
-                            onClick={() => {
-                              if (!isOwner) onToggleWant(member.id);
-                            }}
-                            disabled={isOwner || savingWantKey === wantKey}
-                            className={clsx(
-                              'inline-flex h-10 items-center justify-center rounded-full border-2 px-4 text-sm font-black transition active:scale-95 disabled:opacity-80',
-                              hasLeadingIcon && 'gap-2 pl-3',
-                              isChecked
-                                ? 'border-sakura bg-sakura text-white'
-                                : 'border-ink/10 bg-white text-ink/62',
-                              isOwner && 'cursor-default border-mint bg-mint text-ink',
-                            )}
-                          >
-                            {hasLeadingIcon && (
-                              <span
+                          return isIncluded ? (
+                            <div
+                              key={member.id}
+                              className={clsx(
+                                'inline-flex h-10 items-center overflow-hidden rounded-full border-2 bg-white text-sm font-black shadow-sm',
+                                isPurchased ? 'border-mint' : 'border-ink/10',
+                              )}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!isOwner) onToggleWant(member.id);
+                                }}
+                                disabled={isOwner || isSavingWant}
                                 className={clsx(
-                                  'grid h-5 w-5 place-items-center rounded-full',
-                                  isOwner || isSaving ? 'bg-white text-ink' : 'bg-white/24',
+                                  'inline-flex h-full items-center gap-2 rounded-l-full px-3 pr-2 transition active:scale-95 disabled:opacity-80',
+                                  isOwner
+                                    ? 'cursor-default text-ink'
+                                    : 'text-ink',
                                 )}
                               >
-                                {isSaving ? (
-                                  <LoaderCircle className="animate-spin" size={14} />
+                                <span
+                                  className={clsx(
+                                    'grid h-5 w-5 place-items-center rounded-full',
+                                    isOwner
+                                      ? 'bg-sky text-ink'
+                                      : 'bg-peach/45 text-ink/65',
+                                  )}
+                                >
+                                  {isSavingWant ? (
+                                    <LoaderCircle
+                                      className="animate-spin"
+                                      size={14}
+                                    />
+                                  ) : (
+                                    <UserRound size={13} strokeWidth={3} />
+                                  )}
+                                </span>
+                                <span className="max-w-24 truncate">
+                                  {member.name}
+                                </span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onTogglePurchase(member.id)}
+                                disabled={isSavingPurchase}
+                                className={clsx(
+                                  'mr-1 grid h-5 w-5 place-items-center rounded-full transition active:scale-95 disabled:opacity-70',
+                                  isPurchased
+                                    ? 'bg-mint text-ink'
+                                    : 'bg-cream text-ink/45',
+                                )}
+                                aria-label={`${member.name} 구매 완료`}
+                              >
+                                {isSavingPurchase ? (
+                                  <LoaderCircle
+                                    className="animate-spin"
+                                    size={15}
+                                  />
                                 ) : (
-                                  <Check size={14} strokeWidth={4} />
+                                  <ShoppingBag size={13} strokeWidth={3} />
+                                )}
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              key={member.id}
+                              type="button"
+                              onClick={() => onToggleWant(member.id)}
+                              disabled={isSavingWant}
+                              className="inline-flex h-10 items-center justify-center gap-2 rounded-full border-2 border-ink/10 bg-white px-3 pr-4 text-sm font-black text-ink/62 transition active:scale-95 disabled:opacity-70"
+                            >
+                              <span className="grid h-5 w-5 place-items-center rounded-full bg-cream text-ink/45">
+                                {isSavingWant ? (
+                                  <LoaderCircle
+                                    className="animate-spin"
+                                    size={14}
+                                  />
+                                ) : (
+                                  <UserPlus size={13} strokeWidth={3} />
                                 )}
                               </span>
-                            )}
-                            <span className="max-w-24 truncate">{member.name}</span>
-                          </button>
-                        );
-                      })}
+                              <span className="max-w-24 truncate">
+                                {member.name}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {item.wantedBy.length > 0 && (
                   <div className="mb-4 rounded-[20px] bg-sakura/10 px-3 py-3">
@@ -561,7 +677,7 @@ export function ItemCard({
                     <span className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-2xl bg-white/90 text-ink shadow-lg">
                       <Maximize2 size={18} />
                     </span>
-                    {item.isPurchased && (
+                    {isPurchasedForSelectedMember && (
                       <div className="absolute inset-0 grid place-items-center bg-white/25">
                         <div className="grid h-16 w-16 place-items-center rounded-full bg-mint text-ink">
                           <Check size={34} strokeWidth={4} />

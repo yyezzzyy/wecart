@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import type { ShoppingItem } from "@/lib/types";
 import { compressImage } from "@/lib/compressImage";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
+import { matchesKoreanSearch } from "@/lib/koreanSearch";
 import { useWecartStore } from "@/stores/useWecartStore";
 import {
   AddItemButton,
@@ -14,7 +15,8 @@ import {
   DeleteItemConfirmModal,
   EmptyState,
   FilterChip,
-  ItemCard
+  ItemCard,
+  SearchBar
 } from "../_components/group-ui";
 
 type ItemForm = {
@@ -27,7 +29,7 @@ type ItemForm = {
   referenceUrl: string;
 };
 
-type ItemResponse = Omit<ShoppingItem, "member" | "category" | "wantedBy">;
+type ItemResponse = Omit<ShoppingItem, "member" | "category" | "wantedBy" | "purchases">;
 
 const emptyForm: ItemForm = {
   name: "",
@@ -59,9 +61,10 @@ export default function ItemsPage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [savingWantKey, setSavingWantKey] = useState<string | null>(null);
-  const [purchasingItemId, setPurchasingItemId] = useState<string | null>(null);
+  const [savingPurchaseKey, setSavingPurchaseKey] = useState<string | null>(null);
   const [deleteTargetItem, setDeleteTargetItem] = useState<ShoppingItem | null>(null);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (!group) return;
@@ -81,9 +84,17 @@ export default function ItemsPage() {
         item.memberId === selectedMemberId ||
         item.wantedBy.some((want) => want.memberId === selectedMemberId);
       const categoryMatches = selectedCategoryId === "all" || item.categoryId === selectedCategoryId;
-      return memberMatches && categoryMatches;
+      const searchTarget = [
+        item.name,
+        item.memo ?? "",
+        item.category.name,
+        item.member.name,
+        ...item.wantedBy.map((want) => want.member.name)
+      ].join(" ");
+
+      return memberMatches && categoryMatches && matchesKoreanSearch(searchTarget, searchQuery);
     });
-  }, [group, selectedCategoryId, selectedMemberId]);
+  }, [group, searchQuery, selectedCategoryId, selectedMemberId]);
 
   function hydrateItem(item: ItemResponse, previousItem?: ShoppingItem): ShoppingItem | null {
     if (!group) return null;
@@ -96,7 +107,8 @@ export default function ItemsPage() {
       ...item,
       member,
       category,
-      wantedBy: previousItem?.wantedBy ?? []
+      wantedBy: previousItem?.wantedBy ?? [],
+      purchases: previousItem?.purchases ?? []
     };
   }
 
@@ -240,30 +252,6 @@ export default function ItemsPage() {
     }
   }
 
-  async function togglePurchased(item: ShoppingItem) {
-    if (purchasingItemId) return;
-
-    const optimisticItem = { ...item, isPurchased: !item.isPurchased };
-
-    updateItem(optimisticItem);
-    setPurchasingItemId(item.id);
-    try {
-      const response = await fetch(`/api/items/${item.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isPurchased: optimisticItem.isPurchased })
-      });
-
-      if (!response.ok) {
-        updateItem(item);
-      }
-    } catch {
-      updateItem(item);
-    } finally {
-      setPurchasingItemId(null);
-    }
-  }
-
   async function handleToggleWant(item: ShoppingItem, memberId: string) {
     if (!group) return;
 
@@ -285,7 +273,10 @@ export default function ItemsPage() {
               member
             }
           ]
-        : item.wantedBy.filter((want) => want.memberId !== memberId)
+        : item.wantedBy.filter((want) => want.memberId !== memberId),
+      purchases: checked
+        ? item.purchases
+        : item.purchases.filter((purchase) => purchase.memberId !== memberId)
     };
 
     updateItem(optimisticItem);
@@ -304,6 +295,54 @@ export default function ItemsPage() {
       updateItem(item);
     } finally {
       setSavingWantKey(null);
+    }
+  }
+
+  async function handleTogglePurchase(item: ShoppingItem, memberId: string) {
+    if (!group || savingPurchaseKey) return;
+
+    const purchaseKey = `${item.id}:${memberId}`;
+    const member = group.members.find((entry) => entry.id === memberId);
+    if (!member) return;
+
+    const currentPurchase = item.purchases.find((purchase) => purchase.memberId === memberId);
+    const isPurchased = !currentPurchase?.isPurchased;
+    const optimisticItem: ShoppingItem = {
+      ...item,
+      purchases: currentPurchase
+        ? item.purchases.map((purchase) =>
+            purchase.memberId === memberId ? { ...purchase, isPurchased } : purchase
+          )
+        : [
+            ...item.purchases,
+            {
+              id: `optimistic-purchase-${purchaseKey}`,
+              itemId: item.id,
+              memberId,
+              isPurchased,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              member
+            }
+          ]
+    };
+
+    updateItem(optimisticItem);
+    setSavingPurchaseKey(purchaseKey);
+    try {
+      const response = await fetch(`/api/items/${item.id}/purchases`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId, isPurchased })
+      });
+
+      if (!response.ok) {
+        updateItem(item);
+      }
+    } catch {
+      updateItem(item);
+    } finally {
+      setSavingPurchaseKey(null);
     }
   }
 
@@ -364,13 +403,19 @@ export default function ItemsPage() {
         </div>
       </section>
 
+      <SearchBar
+        value={searchQuery}
+        onChange={setSearchQuery}
+        onClear={() => setSearchQuery("")}
+      />
+
       <div className="mt-5 flex items-end justify-between">
         <div>
           <p className="text-sm font-bold text-ink/55">담긴 쇼핑템</p>
           <p className="text-3xl font-black">{filteredItems.length}개</p>
         </div>
         <p className="rounded-full bg-white px-3 py-2 text-xs font-black text-ink/60">
-          구매완료 {group.items.filter((item) => item.isPurchased).length}
+          구매완료 {group.items.reduce((sum, item) => sum + item.purchases.filter((purchase) => purchase.isPurchased).length, 0)}
         </p>
       </div>
 
@@ -384,17 +429,25 @@ export default function ItemsPage() {
               item={item}
               members={group.members}
               savingWantKey={savingWantKey}
-              purchasingItemId={purchasingItemId}
-              onToggle={() => togglePurchased(item)}
+              savingPurchaseKey={savingPurchaseKey}
+              selectedMemberId={selectedMemberId}
               onEdit={() => openEditModal(item)}
               onToggleWant={(memberId) => handleToggleWant(item, memberId)}
+              onTogglePurchase={(memberId) => handleTogglePurchase(item, memberId)}
               onDelete={canDeleteItem ? () => setDeleteTargetItem(item) : undefined}
             />
           );
         })}
 
         {filteredItems.length === 0 && (
-          <EmptyState title="아직 담긴 아이템이 없어요" description="추가 버튼으로 첫 쇼핑템을 담아봐요." />
+          <EmptyState
+            title={searchQuery.trim() ? "검색 결과가 없어요" : "아직 담긴 아이템이 없어요"}
+            description={
+              searchQuery.trim()
+                ? "초성이나 자모를 조금 줄여서 다시 찾아봐요."
+                : "추가 버튼으로 첫 쇼핑템을 담아봐요."
+            }
+          />
         )}
       </div>
 

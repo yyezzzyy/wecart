@@ -34,6 +34,14 @@ export async function GET(_: Request, { params }: Params) {
             orderBy: {
               createdAt: "asc"
             }
+          },
+          purchases: {
+            include: {
+              member: true
+            },
+            orderBy: {
+              createdAt: "asc"
+            }
           }
         },
         orderBy: {

@@ -26,6 +26,7 @@ export type ShoppingItem = {
   member: Member;
   category: Category;
   wantedBy: ShoppingItemWant[];
+  purchases: ShoppingItemPurchase[];
 };
 
 export type GroupDetail = {
@@ -41,5 +42,15 @@ export type ShoppingItemWant = {
   itemId: string;
   memberId: string;
   createdAt: string;
+  member: Member;
+};
+
+export type ShoppingItemPurchase = {
+  id: string;
+  itemId: string;
+  memberId: string;
+  isPurchased: boolean;
+  createdAt: string;
+  updatedAt: string;
   member: Member;
 };

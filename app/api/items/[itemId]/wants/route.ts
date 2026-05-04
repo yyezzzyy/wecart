@@ -38,6 +38,12 @@ export async function PATCH(request: Request, { params }: Params) {
         memberId: body.memberId
       }
     });
+    await prisma.shoppingItemPurchase.deleteMany({
+      where: {
+        itemId: params.itemId,
+        memberId: body.memberId
+      }
+    });
   }
 
   return NextResponse.json({ ok: true });
